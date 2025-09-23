@@ -1,5 +1,5 @@
 {
-  "name": "io-js",
+  "name": "io",
   "version": "1.0.0",
   "description": "Lightweight DOM utility library",
   "main": "dist/io.min.js",
