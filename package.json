@@ -7,7 +7,7 @@
     "build": "node build/build.js"
   },
   "author": "Gigoland.com",
-  "license": "NC",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/Gigoland/IO.git"

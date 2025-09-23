@@ -2,7 +2,7 @@
  * IO - Modern lightweight DOM utility library
  * Version: 1.0.0
  * Author: Gigoland.com
- * License: Non-Commercial (NC)
+ * License: MIT License
  * Repository: https://github.com/Gigoland/IO
  * Description: Lightweight utility for DOM manipulation, events, attributes, CSS, and safe HTML handling.
  */
