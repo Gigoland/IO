@@ -1,0 +1,18 @@
+{
+  "name": "io-js",
+  "version": "1.0.0",
+  "description": "Lightweight DOM utility library",
+  "main": "dist/io.min.js",
+  "scripts": {
+    "build": "node build/build.js"
+  },
+  "author": "Gigoland.com",
+  "license": "NC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Gigoland/IO.git"
+  },
+  "devDependencies": {
+    "uglify-js": "^3.17.4"
+  }
+}
