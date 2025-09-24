@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 - Placeholder for future changes.
 
+## [1.0.2] - 2025-09-25
+### Added
+- Placeholder for new features and improvements in version 1.0.2.
+
 ## [1.0.1] - 2025-09-24
 ### Added
 - Added `forEach` method for iterating over elements, with `natif = true` by default to pass `HTMLElement` and `natif = false` to pass `IO` instance.

@@ -1,21 +1,30 @@
 /**
  * IO - Modern lightweight DOM utility library
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Gigoland.com
  * License: MIT License
  * Repository: https://github.com/Gigoland/IO
- * Description: Lightweight utility for DOM manipulation, events, attributes, CSS, and safe HTML handling.
+ * Description: Lightweight utility for DOM manipulation, events, attributes, CSS, and HTML handling. Users are responsible for sanitizing HTML input using sanitizeXSS manually.
  */
 class IO {
   // Initialize elements based on selector type
   constructor(selector, context = document) {
     if (typeof selector === 'string') {
+      selector = selector.trim();
       if (selector === 'body') {
-        if (!document.body) {
-          console.warn('IO: document.body is not available, ensure DOM is loaded');
+        if (!(context instanceof Document) || !context.body) {
+          console.warn('IO: Invalid context or document.body not available');
           this.elements = [];
         } else {
-          this.elements = [document.body]; // Optimize for 'body' selector
+          this.elements = [context.body];
+        }
+      } else if (/^#[^\s][\S]*$/.test(selector)) {
+        const id = selector.slice(1);
+        const element = context.getElementById && !(context instanceof DocumentFragment) ? context.getElementById(id) : context.querySelector(`#${CSS.escape(id)}`);
+        if (element) {
+          this.elements = [element];
+        } else {
+          this.elements = [];
         }
       } else {
         this.elements = Array.from(context.querySelectorAll(selector));
@@ -26,11 +35,11 @@ class IO {
     } else if (selector instanceof Element) {
       this.elements = [selector];
     } else if (selector instanceof Document) {
-      if (!document.body) {
-        console.warn('IO: document.body is not available, ensure DOM is loaded');
+      if (!selector.body) {
+        console.warn('IO: document.body is not available');
         this.elements = [];
       } else {
-        this.elements = [selector.body]; // Use body for Document to avoid method errors
+        this.elements = [selector.body];
       }
     } else if (selector instanceof NodeList || Array.isArray(selector)) {
       this.elements = Array.from(selector).filter(el => el instanceof Element);
@@ -42,7 +51,9 @@ class IO {
 
   // Iterate over all elements with native or IO instance
   forEach(callback, natif = true) {
-    this.elements.forEach((el, i) => callback.call(el, natif ? el : new IO(el), i));
+    this.elements.forEach((el, i) => {
+      callback.call(el, natif ? el : new IO(el), i);
+    });
     return this;
   }
 
@@ -56,24 +67,38 @@ class IO {
   // Show all elements by resetting display or setting to block
   show(isEmpty = false) {
     return this.forEach(el => {
-      el.style.display = isEmpty ? '' : 'block';
+      el.style.display = isEmpty ? '' : (el.dataset.originalDisplay || 'block');
     });
   }
 
   // Hide all elements
   hide() {
-    return this.forEach(el => (el.style.display = 'none'));
+    return this.forEach(el => {
+      el.dataset.originalDisplay = getComputedStyle(el).display;
+      el.style.display = 'none';
+    });
   }
 
   // Toggle visibility of all elements
-  toggle(display = 'block') {
-    return this.forEach(el => (el.style.display = el.style.display === 'none' ? display : 'none'));
+  toggleVisibility() {
+    return this.forEach(el => {
+      const currentDisplay = getComputedStyle(el).display;
+      if (currentDisplay === 'none') {
+        const originalDisplay = el.dataset.originalDisplay || 'block';
+        el.style.display = originalDisplay;
+      } else {
+        el.dataset.originalDisplay = currentDisplay;
+        el.style.display = 'none';
+      }
+    });
   }
 
   // Enable all elements
   enable() {
     return this.forEach(el => {
-      el.disabled = false;
+      if ('disabled' in el) {
+        el.disabled = false;
+      }
       el.style.pointerEvents = 'auto';
       el.classList.remove('disabled', 'opacity-25');
     });
@@ -82,7 +107,9 @@ class IO {
   // Disable all elements
   disable() {
     return this.forEach(el => {
-      el.disabled = true;
+      if ('disabled' in el) {
+        el.disabled = true;
+      }
       el.style.pointerEvents = 'none';
       el.classList.add('disabled', 'opacity-25');
     });
@@ -91,183 +118,250 @@ class IO {
   /*** Class Methods ***/
 
   // Add class to all elements
-  addClass(cls) {
-    if (!cls || typeof cls !== 'string') {
-      console.warn('addClass: Invalid class name');
+  addClass(...classes) {
+    if (!classes.length || classes.some(cls => !cls || typeof cls !== 'string' || !cls.trim())) {
+      console.warn('addClass: Invalid class name(s)');
       return this;
     }
-    return this.forEach(el => el.classList.add(cls));
+    const classList = classes.flatMap(cls => cls.trim().split(/\s+/));
+    return this.forEach(el => {
+      el.classList.add(...classList);
+    });
   }
 
   // Remove class from all elements
-  removeClass(cls) {
-    if (!cls || typeof cls !== 'string') {
-      console.warn('removeClass: Invalid class name');
+  removeClass(...classes) {
+    if (!classes.length || classes.some(cls => !cls || typeof cls !== 'string' || !cls.trim())) {
+      console.warn('removeClass: Invalid class name(s)');
       return this;
     }
-    return this.forEach(el => el.classList.remove(cls));
+    const classList = classes.flatMap(cls => cls.trim().split(/\s+/));
+    return this.forEach(el => {
+      el.classList.remove(...classList);
+    });
   }
 
   // Toggle class on all elements
-  toggleClass(cls) {
-    if (!cls || typeof cls !== 'string') {
-      console.warn('toggleClass: Invalid class name');
+  toggleClass(...classes) {
+    if (!classes.length || classes.some(cls => !cls || typeof cls !== 'string' || !cls.trim())) {
+      console.warn('toggleClass: Invalid class name(s)');
       return this;
     }
-    return this.forEach(el => el.classList.toggle(cls));
+    const classList = classes.flatMap(cls => cls.trim().split(/\s+/));
+    return this.forEach(el => {
+      classList.forEach(className => {
+        el.classList.toggle(className);
+      });
+    });
   }
 
   // Check if first element has class
-  hasClass(cls) {
-    if (!cls || typeof cls !== 'string') {
-      console.warn('hasClass: Invalid class name');
+  hasClass(...classes) {
+    if (!classes.length || classes.some(cls => !cls || typeof cls !== 'string' || !cls.trim())) {
+      console.warn('hasClass: Invalid class name(s)');
       return false;
     }
-    return this.elements[0]?.classList.contains(cls) ?? false;
-  }
-
-  // Check if first element doesn't have class
-  hasNotClass(cls) {
-    return !this.hasClass(cls);
+    if (this.elements[0]) {
+      return classes.every(cls => this.elements[0].classList.contains(cls.trim()));
+    }
+    return false;
   }
 
   // Remove class from elements found by selector within current elements
-  removeClassBy(target, className) {
-    if (!target || !className || typeof target !== 'string' || typeof className !== 'string') {
-      console.warn('removeClassBy: Invalid target or className');
+  removeClassBy(target, ...classes) {
+    if (!target || !classes.length || typeof target !== 'string' || classes.some(cls => !cls || typeof cls !== 'string' || !cls.trim())) {
+      console.warn('removeClassBy: Invalid target or class name(s)');
       return this;
     }
+    const classList = classes.flatMap(cls => cls.trim().split(/\s+/));
     return this.forEach(el => {
       el.querySelectorAll(target).forEach(child => {
-        child.classList.remove(className);
+        child.classList.remove(...classList);
       });
     });
   }
 
   /*** HTML & Text Methods ***/
 
-  // Get or set innerHTML of elements (use sanitizeXSS manually for safety)
+  // Get or set innerHTML of elements (user must sanitize input manually using sanitizeXSS)
   html(val) {
     if (val === undefined) {
-      return this.elements[0]?.innerHTML ?? null;
+      if (this.elements[0]) {
+        return this.elements[0].innerHTML;
+      }
+      return null;
     }
     if (typeof val !== 'string' && typeof val !== 'number') {
       console.warn('html: Invalid value, expected string or number');
       return this;
     }
-    return this.forEach(el => (el.innerHTML = val));
+    return this.forEach(el => {
+      el.innerHTML = String(val);
+    });
   }
 
   // Get or set textContent of elements
   text(val) {
     if (val === undefined) {
-      return this.elements[0]?.textContent ?? null;
+      if (this.elements[0]) {
+        return this.elements[0].textContent;
+      }
+      return null;
     }
     if (typeof val !== 'string' && typeof val !== 'number') {
       console.warn('text: Invalid value, expected string or number');
       return this;
     }
-    return this.forEach(el => (el.textContent = val));
+    return this.forEach(el => {
+      el.textContent = val;
+    });
   }
 
-  // Add value to innerHTML (numeric or string concatenation)
+  // Add value to innerHTML (numeric or string concatenation; user must sanitize input manually using sanitizeXSS)
   htmlAdd(val) {
-    if (val === undefined || (typeof val !== 'string' && typeof val !== 'number')) {
+    if (val === undefined) {
+      if (this.elements[0]) {
+        return this.elements[0].innerHTML;
+      }
+      return null;
+    }
+    if (typeof val !== 'string' && typeof val !== 'number') {
       console.warn('htmlAdd: Invalid value, expected string or number');
       return this;
     }
     return this.forEach(el => {
-      if (typeof val === 'number' && /^-?\d+(?:\.\d+)?$/.test(el.innerHTML.trim())) {
-        el.innerHTML = parseFloat(el.innerHTML.trim()) + val;
+      const currentText = el.textContent.trim();
+      if (typeof val === 'number' && el.childNodes.length === 1 && el.childNodes[0].nodeType === Node.TEXT_NODE && /^-?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)$/.test(currentText)) {
+        el.innerHTML = (parseFloat(currentText) + val).toString();
       } else {
-        el.innerHTML += val;
+        el.innerHTML += String(val);
       }
     });
   }
 
   // Subtract value from innerHTML (numeric or string replacement)
   htmlSub(val) {
-    if (val === undefined || (typeof val !== 'string' && typeof val !== 'number')) {
+    if (val === undefined) {
+      if (this.elements[0]) {
+        return this.elements[0].innerHTML;
+      }
+      return null;
+    }
+    if (typeof val !== 'string' && typeof val !== 'number') {
       console.warn('htmlSub: Invalid value, expected string or number');
       return this;
     }
     return this.forEach(el => {
-      if (typeof val === 'number' && /^-?\d+(?:\.\d+)?$/.test(el.innerHTML.trim())) {
-        el.innerHTML = parseFloat(el.innerHTML.trim()) - val;
+      const currentText = el.textContent.trim();
+      if (typeof val === 'number' && el.childNodes.length === 1 && el.childNodes[0].nodeType === Node.TEXT_NODE && /^-?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)$/.test(currentText)) {
+        el.innerHTML = (parseFloat(currentText) - val).toString();
       } else {
-        el.innerHTML = el.innerHTML.replace(new RegExp(this.escapeRegExp(val), 'g'), '');
+        el.innerHTML = el.innerHTML.replace(new RegExp(this.escapeRegExp(String(val)), 'g'), '');
       }
     });
   }
 
-  // Append HTML to elements (use sanitizeXSS manually for safety)
+  // Append HTML to elements (user must sanitize input manually using sanitizeXSS)
   htmlAppend(val) {
-    if (!val || typeof val !== 'string') {
-      console.warn('htmlAppend: Invalid HTML string');
-      return this;
-    }
-    return this.forEach(el => el.insertAdjacentHTML('beforeend', val));
+    return this.forEach(el => {
+      if (typeof val === 'string') {
+        const temp = document.createElement('div');
+        temp.innerHTML = val.trim();
+        Array.from(temp.childNodes).filter(n => n.nodeType === Node.ELEMENT_NODE).forEach(child => el.appendChild(child));
+      } else if (val instanceof HTMLElement) {
+        // Directly append HTMLElement
+        el.appendChild(val);
+      } else if (val instanceof IO) {
+        // Append each element inside IO instance
+        val.forEach(child => el.appendChild(child));
+      } else {
+        console.warn('htmlAppend: Invalid value', val);
+      }
+    });
   }
 
-  // Prepend HTML to elements (use sanitizeXSS manually for safety)
+  // Prepend HTML to elements (user must sanitize input manually using sanitizeXSS)
   htmlPrepend(val) {
-    if (!val || typeof val !== 'string') {
-      console.warn('htmlPrepend: Invalid HTML string');
-      return this;
-    }
-    return this.forEach(el => el.insertAdjacentHTML('afterbegin', val));
+    return this.forEach(el => {
+      if (typeof val === 'string') {
+        const temp = document.createElement('div');
+        temp.innerHTML = val.trim();
+        Array.from(temp.childNodes).filter(n => n.nodeType === Node.ELEMENT_NODE).reverse().forEach(child => el.insertBefore(child, el.firstChild));
+      } else if (val instanceof HTMLElement) {
+        el.insertBefore(val, el.firstChild);
+      } else if (val instanceof IO) {
+        val.forEach(child => el.insertBefore(child, el.firstChild));
+      } else {
+        console.warn('htmlPrepend: Invalid value', val);
+      }
+    });
   }
 
-  // Insert HTML before all elements (use sanitizeXSS manually for safety)
+  // Insert HTML before all elements (user must sanitize input manually using sanitizeXSS)
   htmlBefore(val) {
-    if (!val || typeof val !== 'string') {
-      console.warn('htmlBefore: Invalid HTML string');
-      return this;
-    }
-    return this.forEach(el => el.insertAdjacentHTML('beforebegin', val));
+    return this.forEach(el => {
+      if (typeof val === 'string') {
+        const temp = document.createElement('div');
+        temp.innerHTML = val.trim();
+        Array.from(temp.childNodes).filter(n => n.nodeType === Node.ELEMENT_NODE).forEach(child => el.parentNode.insertBefore(child, el));
+      } else if (val instanceof HTMLElement) {
+        el.parentNode.insertBefore(val, el);
+      } else if (val instanceof IO) {
+        val.forEach(child => el.parentNode.insertBefore(child, el));
+      } else {
+        console.warn('htmlBefore: Invalid value', val);
+      }
+    });
   }
 
-  // Insert HTML after all elements (use sanitizeXSS manually for safety)
+  // Insert HTML after all elements (user must sanitize input manually using sanitizeXSS)
   htmlAfter(val) {
-    if (!val || typeof val !== 'string') {
-      console.warn('htmlAfter: Invalid HTML string');
-      return this;
-    }
-    return this.forEach(el => el.insertAdjacentHTML('afterend', val));
+    return this.forEach(el => {
+      if (typeof val === 'string') {
+        const temp = document.createElement('div');
+        temp.innerHTML = val.trim();
+        Array.from(temp.childNodes).filter(n => n.nodeType === Node.ELEMENT_NODE).reverse().forEach(child => el.parentNode.insertBefore(child, el.nextSibling));
+      } else if (val instanceof HTMLElement) {
+        el.parentNode.insertBefore(val, el.nextSibling);
+      } else if (val instanceof IO) {
+        Array.from(val.elements).reverse().forEach(child => el.parentNode.insertBefore(child, el.nextSibling));
+      } else {
+        console.warn('htmlAfter: Invalid value', val);
+      }
+    });
   }
 
-  // Replace all elements with HTML (use sanitizeXSS manually for safety)
+  // Replace all elements with HTML (user must sanitize input manually using sanitizeXSS)
   htmlReplace(val) {
-    if (!val || typeof val !== 'string') {
-      console.warn('htmlReplace: Invalid HTML string');
-      return this;
-    }
-    return this.forEach(el => (el.outerHTML = val));
+    return this.forEach(el => {
+      if (typeof val === 'string') {
+        const temp = document.createElement('div');
+        temp.innerHTML = val.trim();
+        const children = Array.from(temp.childNodes).filter(n => n.nodeType === Node.ELEMENT_NODE);
+        if (children.length) {
+          const parent = el.parentNode;
+          children.forEach(child => parent.insertBefore(child, el));
+          parent.removeChild(el);
+        }
+      } else if (val instanceof HTMLElement) {
+        el.parentNode.replaceChild(val, el);
+      } else if (val instanceof IO) {
+        const parent = el.parentNode;
+        val.forEach(child => parent.insertBefore(child, el));
+        parent.removeChild(el);
+      } else {
+        console.warn('htmlReplace: Invalid value', val);
+      }
+    });
   }
 
   /*** DOM Manipulation Methods ***/
 
-  // Append HTML to elements (use sanitizeXSS manually for safety)
-  append(val) {
-    if (!val || typeof val !== 'string') {
-      console.warn('append: Invalid HTML string');
-      return this;
-    }
-    return this.forEach(el => el.insertAdjacentHTML('beforeend', val));
-  }
-
-  // Prepend HTML to elements (use sanitizeXSS manually for safety)
-  prepend(val) {
-    if (!val || typeof val !== 'string') {
-      console.warn('prepend: Invalid HTML string');
-      return this;
-    }
-    return this.forEach(el => el.insertAdjacentHTML('afterbegin', val));
-  }
-
   // Remove all elements
   remove() {
-    return this.forEach(el => el.remove());
+    return this.forEach(el => {
+      el.remove();
+    });
   }
 
   /*** Attribute & Value Methods ***/
@@ -276,12 +370,20 @@ class IO {
   attr(name, value) {
     if (!name || typeof name !== 'string') {
       console.warn('attr: Invalid attribute name');
-      return value === undefined ? null : this;
+      if (value === undefined) {
+        return null;
+      }
+      return this;
     }
     if (value === undefined) {
-      return this.elements[0]?.getAttribute(name) ?? null;
+      if (this.elements[0]) {
+        return this.elements[0].getAttribute(name);
+      }
+      return null;
     }
-    return this.forEach(el => el.setAttribute(name, value));
+    return this.forEach(el => {
+      el.setAttribute(name, value);
+    });
   }
 
   // Remove attribute from elements
@@ -290,31 +392,49 @@ class IO {
       console.warn('removeAttr: Invalid attribute name');
       return this;
     }
-    return this.forEach(el => el.removeAttribute(name));
+    return this.forEach(el => {
+      el.removeAttribute(name);
+    });
   }
 
   // Get or set aria attribute
   aria(param, val) {
     if (!param || typeof param !== 'string') {
       console.warn('aria: Invalid aria attribute');
-      return val === undefined ? null : this;
+      if (val === undefined) {
+        return null;
+      }
+      return this;
     }
     if (val === undefined) {
-      return this.elements[0]?.getAttribute(`aria-${param}`) ?? null;
+      if (this.elements[0]) {
+        return this.elements[0].getAttribute(`aria-${param}`);
+      }
+      return null;
     }
-    return this.forEach(el => el.setAttribute(`aria-${param}`, val));
+    return this.forEach(el => {
+      el.setAttribute(`aria-${param}`, val);
+    });
   }
 
   // Get or set data attribute
   data(name, value) {
     if (!name || typeof name !== 'string') {
       console.warn('data: Invalid data attribute name');
-      return value === undefined ? null : this;
+      if (value === undefined) {
+        return null;
+      }
+      return this;
     }
     if (value === undefined) {
-      return this.elements[0]?.dataset[name] ?? undefined;
+      if (this.elements[0]) {
+        return this.elements[0].dataset[name];
+      }
+      return null;
     }
-    return this.forEach(el => (el.dataset[name] = value));
+    return this.forEach(el => {
+      el.dataset[name] = value;
+    });
   }
 
   // Add value to data attribute (numeric or string concatenation)
@@ -325,8 +445,8 @@ class IO {
     }
     return this.forEach(el => {
       const current = el.dataset[param] || '';
-      if (typeof val === 'number' && /^-?\d+(?:\.\d+)?$/.test(current.trim())) {
-        el.dataset[param] = parseFloat(current.trim()) + val;
+      if (typeof val === 'number' && !isNaN(parseFloat(current)) && Number.isFinite(parseFloat(current))) {
+        el.dataset[param] = (parseFloat(current) + val).toString();
       } else {
         el.dataset[param] = current + val;
       }
@@ -341,25 +461,35 @@ class IO {
     }
     return this.forEach(el => {
       const current = el.dataset[param] || '';
-      if (typeof val === 'number' && /^-?\d+(?:\.\d+)?$/.test(current.trim())) {
-        el.dataset[param] = parseFloat(current.trim()) - val;
+      if (typeof val === 'number' && !isNaN(parseFloat(current)) && Number.isFinite(parseFloat(current))) {
+        el.dataset[param] = (parseFloat(current) - val).toString();
       } else {
-        el.dataset[param] = current.replace(new RegExp(this.escapeRegExp(val), 'g'), '');
+        el.dataset[param] = current.replace(new RegExp(this.escapeRegExp(String(val)), 'g'), '');
       }
     });
   }
 
   // Get all data attributes of first element
   dataAll() {
-    return this.elements[0] ? Object.entries(this.elements[0].dataset) : [];
+    if (this.elements[0]) {
+      return Object.entries(this.elements[0].dataset);
+    }
+    return [];
   }
 
   // Get or set value of elements
   val(value) {
     if (value === undefined) {
-      return this.elements[0]?.value ?? null;
+      if (this.elements[0] && (this.elements[0] instanceof HTMLInputElement || this.elements[0] instanceof HTMLSelectElement || this.elements[0] instanceof HTMLTextAreaElement)) {
+        return this.elements[0].value;
+      }
+      return null;
     }
-    return this.forEach(el => (el.value = value));
+    return this.forEach(el => {
+      if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement) {
+        el.value = value != null ? String(value) : '';
+      }
+    });
   }
 
   /*** CSS Methods ***/
@@ -367,7 +497,10 @@ class IO {
   // Get or set CSS styles
   css(prop, value) {
     if (typeof prop === 'string' && value === undefined) {
-      return this.elements[0] ? getComputedStyle(this.elements[0])[prop] : null;
+      if (this.elements[0]) {
+        return getComputedStyle(this.elements[0])[prop];
+      }
+      return null;
     }
     if (typeof prop !== 'string' && typeof prop !== 'object') {
       console.warn('css: Invalid property');
@@ -376,10 +509,28 @@ class IO {
     return this.forEach(el => {
       if (typeof prop === 'object') {
         for (let key in prop) {
-          el.style[key] = prop[key];
+          if (key.startsWith('--')) {
+            el.style.setProperty(key, prop[key]);
+          } else {
+            const camelKey = key.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+            if (camelKey in el.style) {
+              el.style[camelKey] = prop[key];
+            } else {
+              console.warn(`css: Invalid style property "${key}"`);
+            }
+          }
         }
       } else {
-        el.style[prop] = value;
+        if (prop.startsWith('--')) {
+          el.style.setProperty(prop, value);
+        } else {
+          const camelProp = prop.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+          if (camelProp in el.style) {
+            el.style[camelProp] = value;
+          } else {
+            console.warn(`css: Invalid style property "${prop}"`);
+          }
+        }
       }
     });
   }
@@ -392,7 +543,9 @@ class IO {
       console.warn('on: Invalid event or handler');
       return this;
     }
-    return this.forEach(el => el.addEventListener(event, handler));
+    return this.forEach(el => {
+      el.addEventListener(event, handler);
+    });
   }
 
   // Remove event listener from all elements
@@ -401,19 +554,25 @@ class IO {
       console.warn('off: Invalid event or handler');
       return this;
     }
-    return this.forEach(el => el.removeEventListener(event, handler));
+    return this.forEach(el => {
+      el.removeEventListener(event, handler);
+    });
   }
 
   // Trigger click or add click handler
   click(handler) {
     if (!handler) {
-      return this.forEach(el => el.click());
+      return this.forEach(el => {
+        el.click();
+      });
     }
     if (typeof handler !== 'function') {
       console.warn('click: Invalid handler');
       return this;
     }
-    return this.forEach(el => el.addEventListener('click', handler));
+    return this.forEach(el => {
+      el.addEventListener('click', handler);
+    });
   }
 
   // Delegate event to matching selector
@@ -424,8 +583,9 @@ class IO {
     }
     return this.forEach(el => {
       el.addEventListener(event, e => {
-        if (e.target.matches(selector)) {
-          handler.call(e.target, e);
+        const target = e.target.closest(selector);
+        if (target && el.contains(target)) {
+          handler.call(target, e);
         }
       });
     });
@@ -460,7 +620,11 @@ class IO {
       console.warn('findAllBy: Invalid selector');
       return new IO([]);
     }
-    return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(target))));
+    const found = [];
+    for (const el of this.elements) {
+      found.push(...el.querySelectorAll(target));
+    }
+    return new IO(found);
   }
 
   // Find first element by ID within document
@@ -469,9 +633,11 @@ class IO {
       console.warn('findById: Invalid ID');
       return new IO([]);
     }
-    // Use document.getElementById for efficiency, regardless of context
-    const found = document.getElementById(id);
-    return new IO(found ? [found] : []);
+    const safeId = CSS.escape(id);
+    return new IO(this.elements.flatMap(el => {
+      const found = el.querySelector(`#${safeId}`);
+      return found ? [found] : [];
+    }).slice(0, 1));
   }
 
   // Find first element by class within elements
@@ -554,8 +720,8 @@ class IO {
       console.warn('findParentById: Invalid ID');
       return new IO([]);
     }
-    const found = this.elements.map(el => el.closest(`#${id}`)).filter(el => el);
-    return new IO(found);
+    const safeId = CSS.escape(id);
+    return new IO(this.elements.map(el => el.closest(`#${safeId}`)).filter(Boolean));
   }
 
   // Find closest parent by class
@@ -564,36 +730,35 @@ class IO {
       console.warn('findParentByClass: Invalid class name');
       return new IO([]);
     }
-    const found = this.elements.map(el => el.closest(`.${className}`)).filter(el => el);
-    return new IO(found);
+    return new IO(this.elements.map(el => el.closest(`.${className}`)).filter(Boolean));
   }
 
   /*** Utility Methods ***/
 
-  // Check if value, text, or HTML is empty
-  isEmptyValue() {
-    const val = this.val() ?? this.text() ?? this.html();
-    return val === null || val === undefined || val.toString().trim() === '';
+  // Check if value is empty based on strict list
+  isEmptyValue(strictZero = true) {
+    const value = this.val();
+    return (typeof value === 'undefined' || ['false', 'null', false, null, ''].includes(value) || (strictZero && value === 0));
   }
 
   // Check if value is not empty
-  isNotEmptyValue() {
-    return !this.isEmptyValue();
+  isNotEmptyValue(strictZero = true) {
+    return !this.isEmptyValue(strictZero);
   }
 
-  // Check if data attribute is empty
-  isEmptyData(param) {
+  // Check if data attribute is empty based on strict list
+  isEmptyData(param, strictZero = true) {
     if (!param || typeof param !== 'string') {
       console.warn('isEmptyData: Invalid parameter');
       return true;
     }
     const data = this.data(param);
-    return data === null || data === undefined || ['', 'false', 'null', '0'].includes(data.toString().trim());
+    return (typeof data === 'undefined' || ['false', 'null', false, null, ''].includes(data) || (strictZero && data === 0));
   }
 
   // Check if data attribute is not empty
-  isNotEmptyData(param) {
-    return !this.isEmptyData(param);
+  isNotEmptyData(param, strictZero = true) {
+    return !this.isEmptyData(param, strictZero);
   }
 
   // Check if any elements exist
@@ -627,7 +792,10 @@ class IO {
   }
 
   // Sanitize HTML string to prevent XSS, allowing safe HTML
-  sanitizeXSS(str, options = { allowedTags: ['b', 'i', 'u', 'strong', 'em', 'p', 'div', 'span', 'a', 'br'], allowedAttributes: ['href', 'class', 'id'] }) {
+  sanitizeXSS(str, options = {
+    allowedTags: ['b', 'i', 'u', 'strong', 'em', 'p', 'div', 'span', 'a', 'br'],
+    allowedAttributes: ['href', 'class', 'id']
+  }) {
     if (typeof str !== 'string') {
       console.warn('sanitizeXSS: Invalid input, expected string');
       return '';
@@ -637,16 +805,20 @@ class IO {
     temp.innerHTML = str;
     const sanitizeNode = (node) => {
       if (node.nodeType === Node.ELEMENT_NODE) {
-        if (!allowedTags.includes(node.tagName.toLowerCase())) {
+        const tagName = node.tagName.toLowerCase();
+        if (!allowedTags.includes(tagName)) {
           node.replaceWith(...Array.from(node.childNodes).map(sanitizeNode));
         } else {
           Array.from(node.attributes).forEach(attr => {
-            if (!allowedAttributes.includes(attr.name)) {
+            const attrName = attr.name.toLowerCase();
+            if (!allowedAttributes.includes(attrName) || (attrName === 'href' && /^(javascript|data):/i.test(attr.value)) || attrName.startsWith('on') || attrName === 'style') {
               node.removeAttribute(attr.name);
             }
           });
           Array.from(node.childNodes).forEach(sanitizeNode);
         }
+      } else if (node.nodeType === Node.TEXT_NODE) {
+        node.textContent = node.textContent.replace(/(javascript|data):/gi, '');
       }
       return node;
     };
