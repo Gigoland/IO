@@ -1,6 +1,6 @@
 /**
  * IO - Modern lightweight DOM utility library
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Gigoland.com
  * License: MIT License
  * Repository: https://github.com/Gigoland/IO
@@ -48,7 +48,7 @@ class IO {
 
   // Iterate over all elements with IO instance
   each(callback) {
-    return forEach(callback, false);
+    return this.forEach(callback, false);
   }
 
   /*** Visibility Methods ***/
