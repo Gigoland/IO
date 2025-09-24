@@ -40,34 +40,39 @@ class IO {
     }
   }
 
-  // Iterate over all elements
-  each(callback, natif = true) {
+  // Iterate over all elements with native or IO instance
+  forEach(callback, natif = true) {
     this.elements.forEach((el, i) => callback.call(el, natif ? el : new IO(el), i));
     return this;
+  }
+
+  // Iterate over all elements with IO instance
+  each(callback) {
+    return forEach(callback, false);
   }
 
   /*** Visibility Methods ***/
 
   // Show all elements by resetting display or setting to block
   show(isEmpty = false) {
-    return this.each(el => {
+    return this.forEach(el => {
       el.style.display = isEmpty ? '' : 'block';
     });
   }
 
   // Hide all elements
   hide() {
-    return this.each(el => (el.style.display = 'none'));
+    return this.forEach(el => (el.style.display = 'none'));
   }
 
   // Toggle visibility of all elements
   toggle(display = 'block') {
-    return this.each(el => (el.style.display = el.style.display === 'none' ? display : 'none'));
+    return this.forEach(el => (el.style.display = el.style.display === 'none' ? display : 'none'));
   }
 
   // Enable all elements
   enable() {
-    return this.each(el => {
+    return this.forEach(el => {
       el.disabled = false;
       el.style.pointerEvents = 'auto';
       el.classList.remove('disabled', 'opacity-25');
@@ -76,7 +81,7 @@ class IO {
 
   // Disable all elements
   disable() {
-    return this.each(el => {
+    return this.forEach(el => {
       el.disabled = true;
       el.style.pointerEvents = 'none';
       el.classList.add('disabled', 'opacity-25');
@@ -91,7 +96,7 @@ class IO {
       console.warn('addClass: Invalid class name');
       return this;
     }
-    return this.each(el => el.classList.add(cls));
+    return this.forEach(el => el.classList.add(cls));
   }
 
   // Remove class from all elements
@@ -100,7 +105,7 @@ class IO {
       console.warn('removeClass: Invalid class name');
       return this;
     }
-    return this.each(el => el.classList.remove(cls));
+    return this.forEach(el => el.classList.remove(cls));
   }
 
   // Toggle class on all elements
@@ -109,7 +114,7 @@ class IO {
       console.warn('toggleClass: Invalid class name');
       return this;
     }
-    return this.each(el => el.classList.toggle(cls));
+    return this.forEach(el => el.classList.toggle(cls));
   }
 
   // Check if first element has class
@@ -132,7 +137,7 @@ class IO {
       console.warn('removeClassBy: Invalid target or className');
       return this;
     }
-    return this.each(el => {
+    return this.forEach(el => {
       el.querySelectorAll(target).forEach(child => {
         child.classList.remove(className);
       });
@@ -150,7 +155,7 @@ class IO {
       console.warn('html: Invalid value, expected string or number');
       return this;
     }
-    return this.each(el => (el.innerHTML = val));
+    return this.forEach(el => (el.innerHTML = val));
   }
 
   // Get or set textContent of elements
@@ -162,7 +167,7 @@ class IO {
       console.warn('text: Invalid value, expected string or number');
       return this;
     }
-    return this.each(el => (el.textContent = val));
+    return this.forEach(el => (el.textContent = val));
   }
 
   // Add value to innerHTML (numeric or string concatenation)
@@ -171,7 +176,7 @@ class IO {
       console.warn('htmlAdd: Invalid value, expected string or number');
       return this;
     }
-    return this.each(el => {
+    return this.forEach(el => {
       if (typeof val === 'number' && /^-?\d+(?:\.\d+)?$/.test(el.innerHTML.trim())) {
         el.innerHTML = parseFloat(el.innerHTML.trim()) + val;
       } else {
@@ -186,7 +191,7 @@ class IO {
       console.warn('htmlSub: Invalid value, expected string or number');
       return this;
     }
-    return this.each(el => {
+    return this.forEach(el => {
       if (typeof val === 'number' && /^-?\d+(?:\.\d+)?$/.test(el.innerHTML.trim())) {
         el.innerHTML = parseFloat(el.innerHTML.trim()) - val;
       } else {
@@ -201,7 +206,7 @@ class IO {
       console.warn('htmlAppend: Invalid HTML string');
       return this;
     }
-    return this.each(el => el.insertAdjacentHTML('beforeend', val));
+    return this.forEach(el => el.insertAdjacentHTML('beforeend', val));
   }
 
   // Prepend HTML to elements (use sanitizeXSS manually for safety)
@@ -210,7 +215,7 @@ class IO {
       console.warn('htmlPrepend: Invalid HTML string');
       return this;
     }
-    return this.each(el => el.insertAdjacentHTML('afterbegin', val));
+    return this.forEach(el => el.insertAdjacentHTML('afterbegin', val));
   }
 
   // Insert HTML before all elements (use sanitizeXSS manually for safety)
@@ -219,7 +224,7 @@ class IO {
       console.warn('htmlBefore: Invalid HTML string');
       return this;
     }
-    return this.each(el => el.insertAdjacentHTML('beforebegin', val));
+    return this.forEach(el => el.insertAdjacentHTML('beforebegin', val));
   }
 
   // Insert HTML after all elements (use sanitizeXSS manually for safety)
@@ -228,7 +233,7 @@ class IO {
       console.warn('htmlAfter: Invalid HTML string');
       return this;
     }
-    return this.each(el => el.insertAdjacentHTML('afterend', val));
+    return this.forEach(el => el.insertAdjacentHTML('afterend', val));
   }
 
   // Replace all elements with HTML (use sanitizeXSS manually for safety)
@@ -237,7 +242,7 @@ class IO {
       console.warn('htmlReplace: Invalid HTML string');
       return this;
     }
-    return this.each(el => (el.outerHTML = val));
+    return this.forEach(el => (el.outerHTML = val));
   }
 
   /*** DOM Manipulation Methods ***/
@@ -248,7 +253,7 @@ class IO {
       console.warn('append: Invalid HTML string');
       return this;
     }
-    return this.each(el => el.insertAdjacentHTML('beforeend', val));
+    return this.forEach(el => el.insertAdjacentHTML('beforeend', val));
   }
 
   // Prepend HTML to elements (use sanitizeXSS manually for safety)
@@ -257,12 +262,12 @@ class IO {
       console.warn('prepend: Invalid HTML string');
       return this;
     }
-    return this.each(el => el.insertAdjacentHTML('afterbegin', val));
+    return this.forEach(el => el.insertAdjacentHTML('afterbegin', val));
   }
 
   // Remove all elements
   remove() {
-    return this.each(el => el.remove());
+    return this.forEach(el => el.remove());
   }
 
   /*** Attribute & Value Methods ***/
@@ -276,7 +281,7 @@ class IO {
     if (value === undefined) {
       return this.elements[0]?.getAttribute(name) ?? null;
     }
-    return this.each(el => el.setAttribute(name, value));
+    return this.forEach(el => el.setAttribute(name, value));
   }
 
   // Remove attribute from elements
@@ -285,7 +290,7 @@ class IO {
       console.warn('removeAttr: Invalid attribute name');
       return this;
     }
-    return this.each(el => el.removeAttribute(name));
+    return this.forEach(el => el.removeAttribute(name));
   }
 
   // Get or set aria attribute
@@ -297,7 +302,7 @@ class IO {
     if (val === undefined) {
       return this.elements[0]?.getAttribute(`aria-${param}`) ?? null;
     }
-    return this.each(el => el.setAttribute(`aria-${param}`, val));
+    return this.forEach(el => el.setAttribute(`aria-${param}`, val));
   }
 
   // Get or set data attribute
@@ -309,7 +314,7 @@ class IO {
     if (value === undefined) {
       return this.elements[0]?.dataset[name] ?? undefined;
     }
-    return this.each(el => (el.dataset[name] = value));
+    return this.forEach(el => (el.dataset[name] = value));
   }
 
   // Add value to data attribute (numeric or string concatenation)
@@ -318,7 +323,7 @@ class IO {
       console.warn('dataAdd: Invalid parameter or value');
       return this;
     }
-    return this.each(el => {
+    return this.forEach(el => {
       const current = el.dataset[param] || '';
       if (typeof val === 'number' && /^-?\d+(?:\.\d+)?$/.test(current.trim())) {
         el.dataset[param] = parseFloat(current.trim()) + val;
@@ -334,7 +339,7 @@ class IO {
       console.warn('dataSub: Invalid parameter or value');
       return this;
     }
-    return this.each(el => {
+    return this.forEach(el => {
       const current = el.dataset[param] || '';
       if (typeof val === 'number' && /^-?\d+(?:\.\d+)?$/.test(current.trim())) {
         el.dataset[param] = parseFloat(current.trim()) - val;
@@ -354,7 +359,7 @@ class IO {
     if (value === undefined) {
       return this.elements[0]?.value ?? null;
     }
-    return this.each(el => (el.value = value));
+    return this.forEach(el => (el.value = value));
   }
 
   /*** CSS Methods ***/
@@ -368,7 +373,7 @@ class IO {
       console.warn('css: Invalid property');
       return this;
     }
-    return this.each(el => {
+    return this.forEach(el => {
       if (typeof prop === 'object') {
         for (let key in prop) {
           el.style[key] = prop[key];
@@ -387,7 +392,7 @@ class IO {
       console.warn('on: Invalid event or handler');
       return this;
     }
-    return this.each(el => el.addEventListener(event, handler));
+    return this.forEach(el => el.addEventListener(event, handler));
   }
 
   // Remove event listener from all elements
@@ -396,19 +401,19 @@ class IO {
       console.warn('off: Invalid event or handler');
       return this;
     }
-    return this.each(el => el.removeEventListener(event, handler));
+    return this.forEach(el => el.removeEventListener(event, handler));
   }
 
   // Trigger click or add click handler
   click(handler) {
     if (!handler) {
-      return this.each(el => el.click());
+      return this.forEach(el => el.click());
     }
     if (typeof handler !== 'function') {
       console.warn('click: Invalid handler');
       return this;
     }
-    return this.each(el => el.addEventListener('click', handler));
+    return this.forEach(el => el.addEventListener('click', handler));
   }
 
   // Delegate event to matching selector
@@ -417,7 +422,7 @@ class IO {
       console.warn('delegate: Invalid event, selector, or handler');
       return this;
     }
-    return this.each(el => {
+    return this.forEach(el => {
       el.addEventListener(event, e => {
         if (e.target.matches(selector)) {
           handler.call(e.target, e);
@@ -432,7 +437,7 @@ class IO {
       console.warn('trigger: Invalid event type');
       return this;
     }
-    return this.each(el => {
+    return this.forEach(el => {
       const event = new Event(eventType, options);
       el.dispatchEvent(event);
     });
