@@ -1,6 +1,6 @@
 /**
  * IO - Modern lightweight DOM utility library
- * Version: 1.0.2
+ * Version: 1.0.3
  * Author: Gigoland.com
  * License: MIT License
  * Repository: https://github.com/Gigoland/IO
@@ -47,6 +47,16 @@ class IO {
       this.elements = [];
       console.warn('IO: Invalid selector type');
     }
+  }
+
+  // Get native current element
+  native() {
+    return this.elements[0] ?? null;
+  }
+
+  // Get all native elements
+  allNative() {
+    return this.elements ?? [];
   }
 
   // Iterate over all elements with native or IO instance
@@ -265,15 +275,11 @@ class IO {
   htmlAppend(val) {
     return this.forEach(el => {
       if (typeof val === 'string') {
-        const temp = document.createElement('div');
-        temp.innerHTML = val.trim();
-        Array.from(temp.childNodes).filter(n => n.nodeType === Node.ELEMENT_NODE).forEach(child => el.appendChild(child));
+        el.insertAdjacentHTML('beforeend', val.trim());
       } else if (val instanceof HTMLElement) {
-        // Directly append HTMLElement
         el.appendChild(val);
       } else if (val instanceof IO) {
-        // Append each element inside IO instance
-        val.forEach(child => el.appendChild(child));
+        val.elements.forEach(child => el.appendChild(child));
       } else {
         console.warn('htmlAppend: Invalid value', val);
       }
@@ -284,13 +290,11 @@ class IO {
   htmlPrepend(val) {
     return this.forEach(el => {
       if (typeof val === 'string') {
-        const temp = document.createElement('div');
-        temp.innerHTML = val.trim();
-        Array.from(temp.childNodes).filter(n => n.nodeType === Node.ELEMENT_NODE).reverse().forEach(child => el.insertBefore(child, el.firstChild));
+        el.insertAdjacentHTML('afterbegin', val.trim());
       } else if (val instanceof HTMLElement) {
         el.insertBefore(val, el.firstChild);
       } else if (val instanceof IO) {
-        val.forEach(child => el.insertBefore(child, el.firstChild));
+        val.elements.forEach(child => el.insertBefore(child, el.firstChild));
       } else {
         console.warn('htmlPrepend: Invalid value', val);
       }
@@ -301,13 +305,11 @@ class IO {
   htmlBefore(val) {
     return this.forEach(el => {
       if (typeof val === 'string') {
-        const temp = document.createElement('div');
-        temp.innerHTML = val.trim();
-        Array.from(temp.childNodes).filter(n => n.nodeType === Node.ELEMENT_NODE).forEach(child => el.parentNode.insertBefore(child, el));
+        el.insertAdjacentHTML('beforebegin', val.trim());
       } else if (val instanceof HTMLElement) {
         el.parentNode.insertBefore(val, el);
       } else if (val instanceof IO) {
-        val.forEach(child => el.parentNode.insertBefore(child, el));
+        val.elements.forEach(child => el.parentNode.insertBefore(child, el));
       } else {
         console.warn('htmlBefore: Invalid value', val);
       }
@@ -318,9 +320,7 @@ class IO {
   htmlAfter(val) {
     return this.forEach(el => {
       if (typeof val === 'string') {
-        const temp = document.createElement('div');
-        temp.innerHTML = val.trim();
-        Array.from(temp.childNodes).filter(n => n.nodeType === Node.ELEMENT_NODE).reverse().forEach(child => el.parentNode.insertBefore(child, el.nextSibling));
+        el.insertAdjacentHTML('afterend', val.trim());
       } else if (val instanceof HTMLElement) {
         el.parentNode.insertBefore(val, el.nextSibling);
       } else if (val instanceof IO) {
@@ -335,19 +335,14 @@ class IO {
   htmlReplace(val) {
     return this.forEach(el => {
       if (typeof val === 'string') {
-        const temp = document.createElement('div');
-        temp.innerHTML = val.trim();
-        const children = Array.from(temp.childNodes).filter(n => n.nodeType === Node.ELEMENT_NODE);
-        if (children.length) {
-          const parent = el.parentNode;
-          children.forEach(child => parent.insertBefore(child, el));
-          parent.removeChild(el);
-        }
+        const parent = el.parentNode;
+        parent.insertAdjacentHTML('beforebegin', val.trim());
+        el.remove();
       } else if (val instanceof HTMLElement) {
         el.parentNode.replaceChild(val, el);
       } else if (val instanceof IO) {
         const parent = el.parentNode;
-        val.forEach(child => parent.insertBefore(child, el));
+        val.elements.forEach(child => parent.insertBefore(child, el));
         parent.removeChild(el);
       } else {
         console.warn('htmlReplace: Invalid value', val);
@@ -803,6 +798,8 @@ class IO {
     const { allowedTags, allowedAttributes } = options;
     const temp = document.createElement('div');
     temp.innerHTML = str;
+    const fragment = document.createDocumentFragment();
+    fragment.append(...temp.childNodes);
     const sanitizeNode = (node) => {
       if (node.nodeType === Node.ELEMENT_NODE) {
         const tagName = node.tagName.toLowerCase();
@@ -822,7 +819,7 @@ class IO {
       }
       return node;
     };
-    Array.from(temp.childNodes).forEach(sanitizeNode);
+    Array.from(fragment.childNodes).forEach(sanitizeNode);
     return temp.innerHTML;
   }
 
