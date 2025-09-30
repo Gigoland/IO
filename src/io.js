@@ -60,9 +60,9 @@ class IO {
   }
 
   // Iterate over all elements with native or IO instance
-  forEach(callback, natif = true) {
+  forEach(callback, native = true) {
     this.elements.forEach((el, i) => {
-      callback.call(el, natif ? el : new IO(el), i);
+      callback.call(el, native ? el : new IO(el), i);
     });
     return this;
   }
