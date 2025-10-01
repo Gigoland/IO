@@ -1,13 +1,17 @@
 /**
  * IO - Modern lightweight DOM utility library
- * Version: 1.0.3
+ * Version: 1.0.4
  * Author: Gigoland.com
  * License: MIT License
  * Repository: https://github.com/Gigoland/IO
  * Description: Lightweight utility for DOM manipulation, events, attributes, CSS, and HTML handling. Users are responsible for sanitizing HTML input using sanitizeXSS manually.
  */
 class IO {
-  // Initialize elements based on selector type
+  /**
+   * Initialize elements based on selector type
+   * @param {string|Element|NodeList|Array|Document} selector - The selector, element, NodeList, array of elements, or document
+   * @param {Document|Element} [context=document] - The context for querying elements
+   */
   constructor(selector, context = document) {
     if (typeof selector === 'string') {
       selector = selector.trim();
@@ -49,61 +53,90 @@ class IO {
     }
   }
 
-  // Get native current element
-  native() {
-    return this.elements[0] ?? null;
-  }
-
-  // Get all native elements
-  allNative() {
-    return this.elements ?? [];
-  }
-
-  // Iterate over all elements with native or IO instance
+  /**
+   * Iterate over all elements with native or IO instance
+   * @param {function} callback - The callback function to execute for each element
+   * @param {boolean} [native=true] - Whether to pass native element or IO instance to callback
+   * @returns {IO} The IO instance for chaining
+   */
   forEach(callback, native = true) {
-    this.elements.forEach((el, i) => {
-      callback.call(el, native ? el : new IO(el), i);
-    });
+    this.elements.forEach((el, i) => callback.call(el, native ? el : new IO(el), i));
     return this;
   }
 
-  // Iterate over all elements with IO instance
+  /**
+   * Iterate over all elements with IO instance
+   * @param {function} callback - The callback function to execute for each IO instance
+   * @returns {IO} The IO instance for chaining
+   */
   each(callback) {
     return this.forEach(callback, false);
   }
 
-  /*** Visibility Methods ***/
-
-  // Show all elements by resetting display or setting to block
-  show(isEmpty = false) {
-    return this.forEach(el => {
-      el.style.display = isEmpty ? '' : (el.dataset.originalDisplay || 'block');
-    });
+  /**
+   * Get the native DOM element at the specified index
+   * @param {number} [index=0] - The index of the element to return
+   * @returns {HTMLElement|null} The DOM element or null if not found
+   */
+  native(index = 0) {
+    if (!Number.isInteger(index)) {
+      console.warn('native: Index must be an integer');
+      return null;
+    }
+    return this.elements[index] ?? null;
   }
 
-  // Hide all elements
+  /**
+   * Get all native DOM elements
+   * @returns {Array<HTMLElement>} Array of DOM elements
+   */
+  allNative() {
+    return this.elements ?? [];
+  }
+
+  /*** Visibility Methods ***/
+
+  /**
+   * Show all elements by resetting display or setting to block
+   * @param {boolean} [isEmpty=false] - Whether to reset display to empty string or use stored/dataset value
+   * @returns {IO} The IO instance for chaining
+   */
+  show(isEmpty = false) {
+    return this.forEach(el => el.style.display = isEmpty ? '' : (el.dataset.ioDisplay || 'block'));
+  }
+
+  /**
+   * Hide all elements
+   * @returns {IO} The IO instance for chaining
+   */
   hide() {
     return this.forEach(el => {
-      el.dataset.originalDisplay = getComputedStyle(el).display;
+      el.dataset.ioDisplay = getComputedStyle(el).display;
       el.style.display = 'none';
     });
   }
 
-  // Toggle visibility of all elements
+  /**
+   * Toggle visibility of all elements
+   * @returns {IO} The IO instance for chaining
+   */
   toggleVisibility() {
     return this.forEach(el => {
       const currentDisplay = getComputedStyle(el).display;
       if (currentDisplay === 'none') {
-        const originalDisplay = el.dataset.originalDisplay || 'block';
-        el.style.display = originalDisplay;
+        const ioDisplay = el.dataset.ioDisplay || 'block';
+        el.style.display = ioDisplay;
       } else {
-        el.dataset.originalDisplay = currentDisplay;
+        el.dataset.ioDisplay = currentDisplay;
         el.style.display = 'none';
       }
     });
   }
 
-  // Enable all elements
+  /**
+   * Enable all elements by removing disabled state and styles
+   * @returns {IO} The IO instance for chaining
+   */
   enable() {
     return this.forEach(el => {
       if ('disabled' in el) {
@@ -114,7 +147,10 @@ class IO {
     });
   }
 
-  // Disable all elements
+  /**
+   * Disable all elements by adding disabled state and styles
+   * @returns {IO} The IO instance for chaining
+   */
   disable() {
     return this.forEach(el => {
       if ('disabled' in el) {
@@ -127,45 +163,58 @@ class IO {
 
   /*** Class Methods ***/
 
-  // Add class to all elements
+  /**
+   * Add one or more classes to all elements
+   * @param {...string} classes - The classes to add
+   * @returns {IO} The IO instance for chaining
+   */
   addClass(...classes) {
     if (!classes.length || classes.some(cls => !cls || typeof cls !== 'string' || !cls.trim())) {
       console.warn('addClass: Invalid class name(s)');
       return this;
     }
     const classList = classes.flatMap(cls => cls.trim().split(/\s+/));
-    return this.forEach(el => {
-      el.classList.add(...classList);
-    });
+    this.elements.forEach(el => el.classList.add(...classList));
+    return this;
   }
 
-  // Remove class from all elements
+  /**
+   * Remove one or more classes from all elements
+   * @param {...string} classes - The classes to remove
+   * @returns {IO} The IO instance for chaining
+   */
   removeClass(...classes) {
     if (!classes.length || classes.some(cls => !cls || typeof cls !== 'string' || !cls.trim())) {
       console.warn('removeClass: Invalid class name(s)');
       return this;
     }
     const classList = classes.flatMap(cls => cls.trim().split(/\s+/));
-    return this.forEach(el => {
-      el.classList.remove(...classList);
-    });
+    this.elements.forEach(el => el.classList.remove(...classList));
+    return this;
   }
 
-  // Toggle class on all elements
+  /**
+   * Toggle one or more classes on all elements
+   * @param {...string} classes - The classes to toggle
+   * @returns {IO} The IO instance for chaining
+   */
   toggleClass(...classes) {
     if (!classes.length || classes.some(cls => !cls || typeof cls !== 'string' || !cls.trim())) {
       console.warn('toggleClass: Invalid class name(s)');
       return this;
     }
     const classList = classes.flatMap(cls => cls.trim().split(/\s+/));
-    return this.forEach(el => {
-      classList.forEach(className => {
-        el.classList.toggle(className);
-      });
+    this.elements.forEach(el => {
+      classList.forEach(className => el.classList.toggle(className));
     });
+    return this;
   }
 
-  // Check if first element has class
+  /**
+   * Check if the first element has all specified classes
+   * @param {...string} classes - The classes to check
+   * @returns {boolean} True if the first element has all classes, false otherwise
+   */
   hasClass(...classes) {
     if (!classes.length || classes.some(cls => !cls || typeof cls !== 'string' || !cls.trim())) {
       console.warn('hasClass: Invalid class name(s)');
@@ -177,40 +226,13 @@ class IO {
     return false;
   }
 
-  // Remove class from elements found by selector within current elements
-  removeClassBy(target, ...classes) {
-    if (!target || !classes.length || typeof target !== 'string' || classes.some(cls => !cls || typeof cls !== 'string' || !cls.trim())) {
-      console.warn('removeClassBy: Invalid target or class name(s)');
-      return this;
-    }
-    const classList = classes.flatMap(cls => cls.trim().split(/\s+/));
-    return this.forEach(el => {
-      el.querySelectorAll(target).forEach(child => {
-        child.classList.remove(...classList);
-      });
-    });
-  }
-
   /*** HTML & Text Methods ***/
 
-  // Get or set innerHTML of elements (user must sanitize input manually using sanitizeXSS)
-  html(val) {
-    if (val === undefined) {
-      if (this.elements[0]) {
-        return this.elements[0].innerHTML;
-      }
-      return null;
-    }
-    if (typeof val !== 'string' && typeof val !== 'number') {
-      console.warn('html: Invalid value, expected string or number');
-      return this;
-    }
-    return this.forEach(el => {
-      el.innerHTML = String(val);
-    });
-  }
-
-  // Get or set textContent of elements
+  /**
+   * Get or set the text content of the first element
+   * @param {string|number} [val] - The text to set
+   * @returns {string|null|IO} The text content of the first element or the IO instance for chaining
+   */
   text(val) {
     if (val === undefined) {
       if (this.elements[0]) {
@@ -222,13 +244,15 @@ class IO {
       console.warn('text: Invalid value, expected string or number');
       return this;
     }
-    return this.forEach(el => {
-      el.textContent = val;
-    });
+    return this.forEach(el => el.textContent = val);
   }
 
-  // Add value to innerHTML (numeric or string concatenation; user must sanitize input manually using sanitizeXSS)
-  htmlAdd(val) {
+  /**
+   * Get or set the HTML content of the first element (sanitize input manually using sanitizeXSS)
+   * @param {string|number} [val] - The HTML to set
+   * @returns {string|null|IO} The HTML content of the first element or the IO instance for chaining
+   */
+  html(val) {
     if (val === undefined) {
       if (this.elements[0]) {
         return this.elements[0].innerHTML;
@@ -236,12 +260,25 @@ class IO {
       return null;
     }
     if (typeof val !== 'string' && typeof val !== 'number') {
+      console.warn('html: Invalid value, expected string or number');
+      return this;
+    }
+    return this.forEach(el => el.innerHTML = String(val));
+  }
+
+  /**
+   * Add value to the HTML content of elements (numeric or string concatenation; sanitize input manually using sanitizeXSS)
+   * @param {string|number} val - The value to add
+   * @returns {IO} The IO instance for chaining
+   */
+  htmlAdd(val) {
+    if (typeof val !== 'string' && typeof val !== 'number') {
       console.warn('htmlAdd: Invalid value, expected string or number');
       return this;
     }
     return this.forEach(el => {
       const currentText = el.textContent.trim();
-      if (typeof val === 'number' && el.childNodes.length === 1 && el.childNodes[0].nodeType === Node.TEXT_NODE && /^-?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)$/.test(currentText)) {
+      if (typeof val === 'number' && !isNaN(parseFloat(currentText)) && Number.isFinite(parseFloat(currentText))) {
         el.innerHTML = (parseFloat(currentText) + val).toString();
       } else {
         el.innerHTML += String(val);
@@ -249,21 +286,19 @@ class IO {
     });
   }
 
-  // Subtract value from innerHTML (numeric or string replacement)
+  /**
+   * Subtract value from the HTML content of elements (numeric or string replacement)
+   * @param {string|number} val - The value to subtract
+   * @returns {IO} The IO instance for chaining
+   */
   htmlSub(val) {
-    if (val === undefined) {
-      if (this.elements[0]) {
-        return this.elements[0].innerHTML;
-      }
-      return null;
-    }
     if (typeof val !== 'string' && typeof val !== 'number') {
       console.warn('htmlSub: Invalid value, expected string or number');
       return this;
     }
     return this.forEach(el => {
       const currentText = el.textContent.trim();
-      if (typeof val === 'number' && el.childNodes.length === 1 && el.childNodes[0].nodeType === Node.TEXT_NODE && /^-?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)$/.test(currentText)) {
+      if (typeof val === 'number' && !isNaN(parseFloat(currentText)) && Number.isFinite(parseFloat(currentText))) {
         el.innerHTML = (parseFloat(currentText) - val).toString();
       } else {
         el.innerHTML = el.innerHTML.replace(new RegExp(this.escapeRegExp(String(val)), 'g'), '');
@@ -271,78 +306,140 @@ class IO {
     });
   }
 
-  // Append HTML to elements (user must sanitize input manually using sanitizeXSS)
+  /**
+   * Append HTML or elements to all elements (sanitize input manually using sanitizeXSS)
+   * @param {string|HTMLElement|IO} val - The HTML, element, or IO instance to append
+   * @returns {IO} The IO instance for chaining
+   */
   htmlAppend(val) {
-    return this.forEach(el => {
+    if (val instanceof IO && val.elements.length === 0) {
+      console.warn('htmlAppend: IO instance has no elements');
+      return this;
+    }
+    return this.forEach((el, i) => {
       if (typeof val === 'string') {
         el.insertAdjacentHTML('beforeend', val.trim());
       } else if (val instanceof HTMLElement) {
-        el.appendChild(val);
+        const nodeToAppend = i < this.elements.length - 1 ? val.cloneNode(true) : val;
+        el.appendChild(nodeToAppend);
       } else if (val instanceof IO) {
-        val.elements.forEach(child => el.appendChild(child));
+        val.elements.forEach((child, j) => {
+          const shouldClone = !(i === this.elements.length - 1 && j === val.elements.length - 1);
+          el.appendChild(shouldClone ? child.cloneNode(true) : child);
+        });
       } else {
         console.warn('htmlAppend: Invalid value', val);
       }
     });
   }
 
-  // Prepend HTML to elements (user must sanitize input manually using sanitizeXSS)
+  /**
+   * Prepend HTML or elements to all elements (sanitize input manually using sanitizeXSS)
+   * @param {string|HTMLElement|IO} val - The HTML, element, or IO instance to prepend
+   * @returns {IO} The IO instance for chaining
+   */
   htmlPrepend(val) {
-    return this.forEach(el => {
+    if (val instanceof IO && val.elements.length === 0) {
+      console.warn('htmlPrepend: IO instance has no elements');
+      return this;
+    }
+    return this.forEach((el, i) => {
       if (typeof val === 'string') {
         el.insertAdjacentHTML('afterbegin', val.trim());
       } else if (val instanceof HTMLElement) {
-        el.insertBefore(val, el.firstChild);
+        const nodeToPrepend = i < this.elements.length - 1 ? val.cloneNode(true) : val;
+        el.insertBefore(nodeToPrepend, el.firstChild);
       } else if (val instanceof IO) {
-        val.elements.forEach(child => el.insertBefore(child, el.firstChild));
+        // Reverse order for prepend to maintain original sequence
+        const reversedChildren = Array.from(val.elements).reverse();
+        reversedChildren.forEach((child, j) => {
+          const shouldClone = !(i === this.elements.length - 1 && j === reversedChildren.length - 1);
+          el.insertBefore(shouldClone ? child.cloneNode(true) : child, el.firstChild);
+        });
       } else {
         console.warn('htmlPrepend: Invalid value', val);
       }
     });
   }
 
-  // Insert HTML before all elements (user must sanitize input manually using sanitizeXSS)
+  /**
+   * Insert HTML or elements before all elements (sanitize input manually using sanitizeXSS)
+   * @param {string|HTMLElement|IO} val - The HTML, element, or IO instance to insert
+   * @returns {IO} The IO instance for chaining
+   */
   htmlBefore(val) {
-    return this.forEach(el => {
+    if (val instanceof IO && val.elements.length === 0) {
+      console.warn('htmlBefore: IO instance has no elements');
+      return this;
+    }
+    return this.forEach((el, i) => {
       if (typeof val === 'string') {
         el.insertAdjacentHTML('beforebegin', val.trim());
       } else if (val instanceof HTMLElement) {
-        el.parentNode.insertBefore(val, el);
+        const nodeToInsert = i < this.elements.length - 1 ? val.cloneNode(true) : val;
+        el.parentNode.insertBefore(nodeToInsert, el);
       } else if (val instanceof IO) {
-        val.elements.forEach(child => el.parentNode.insertBefore(child, el));
+        val.elements.forEach((child, j) => {
+          const shouldClone = !(i === this.elements.length - 1 && j === val.elements.length - 1);
+          el.parentNode.insertBefore(shouldClone ? child.cloneNode(true) : child, el);
+        });
       } else {
         console.warn('htmlBefore: Invalid value', val);
       }
     });
   }
 
-  // Insert HTML after all elements (user must sanitize input manually using sanitizeXSS)
+  /**
+   * Insert HTML or elements after all elements (sanitize input manually using sanitizeXSS)
+   * @param {string|HTMLElement|IO} val - The HTML, element, or IO instance to insert
+   * @returns {IO} The IO instance for chaining
+   */
   htmlAfter(val) {
-    return this.forEach(el => {
+    if (val instanceof IO && val.elements.length === 0) {
+      console.warn('htmlAfter: IO instance has no elements');
+      return this;
+    }
+    return this.forEach((el, i) => {
       if (typeof val === 'string') {
         el.insertAdjacentHTML('afterend', val.trim());
       } else if (val instanceof HTMLElement) {
-        el.parentNode.insertBefore(val, el.nextSibling);
+        const nodeToInsert = i < this.elements.length - 1 ? val.cloneNode(true) : val;
+        el.parentNode.insertBefore(nodeToInsert, el.nextSibling);
       } else if (val instanceof IO) {
-        Array.from(val.elements).reverse().forEach(child => el.parentNode.insertBefore(child, el.nextSibling));
+        // Reverse for maintaining order when inserting after
+        Array.from(val.elements).reverse().forEach((child, j) => {
+          const shouldClone = !(i === this.elements.length - 1 && j === val.elements.length - 1);
+          el.parentNode.insertBefore(shouldClone ? child.cloneNode(true) : child, el.nextSibling);
+        });
       } else {
         console.warn('htmlAfter: Invalid value', val);
       }
     });
   }
 
-  // Replace all elements with HTML (user must sanitize input manually using sanitizeXSS)
+  /**
+   * Replace all elements with HTML or elements (sanitize input manually using sanitizeXSS)
+   * @param {string|HTMLElement|IO} val - The HTML, element, or IO instance to replace with
+   * @returns {IO} The IO instance for chaining
+   */
   htmlReplace(val) {
-    return this.forEach(el => {
+    if (val instanceof IO && val.elements.length === 0) {
+      console.warn('htmlReplace: IO instance has no elements');
+      return this;
+    }
+    return this.forEach((el, i) => {
       if (typeof val === 'string') {
-        const parent = el.parentNode;
-        parent.insertAdjacentHTML('beforebegin', val.trim());
+        el.insertAdjacentHTML('beforebegin', val.trim());
         el.remove();
       } else if (val instanceof HTMLElement) {
-        el.parentNode.replaceChild(val, el);
+        const nodeToReplace = i < this.elements.length - 1 ? val.cloneNode(true) : val;
+        el.parentNode.replaceChild(nodeToReplace, el);
       } else if (val instanceof IO) {
         const parent = el.parentNode;
-        val.elements.forEach(child => parent.insertBefore(child, el));
+        val.elements.forEach((child, j) => {
+          const shouldClone = !(i === this.elements.length - 1 && j === val.elements.length - 1);
+          parent.insertBefore(shouldClone ? child.cloneNode(true) : child, el);
+        });
         parent.removeChild(el);
       } else {
         console.warn('htmlReplace: Invalid value', val);
@@ -352,16 +449,22 @@ class IO {
 
   /*** DOM Manipulation Methods ***/
 
-  // Remove all elements
+  /**
+   * Remove all elements from the DOM
+   * @returns {IO} The IO instance for chaining
+   */
   remove() {
-    return this.forEach(el => {
-      el.remove();
-    });
+    return this.forEach(el => el.remove());
   }
 
   /*** Attribute & Value Methods ***/
 
-  // Get or set attribute
+  /**
+   * Get or set an attribute on all elements
+   * @param {string} name - The attribute name
+   * @param {string} [value] - The attribute value to set
+   * @returns {string|null|IO} The attribute value of the first element or the IO instance for chaining
+   */
   attr(name, value) {
     if (!name || typeof name !== 'string') {
       console.warn('attr: Invalid attribute name');
@@ -376,23 +479,28 @@ class IO {
       }
       return null;
     }
-    return this.forEach(el => {
-      el.setAttribute(name, value);
-    });
+    return this.forEach(el => el.setAttribute(name, value));
   }
 
-  // Remove attribute from elements
+  /**
+   * Remove an attribute from all elements
+   * @param {string} name - The attribute name to remove
+   * @returns {IO} The IO instance for chaining
+   */
   removeAttr(name) {
     if (!name || typeof name !== 'string') {
       console.warn('removeAttr: Invalid attribute name');
       return this;
     }
-    return this.forEach(el => {
-      el.removeAttribute(name);
-    });
+    return this.forEach(el => el.removeAttribute(name));
   }
 
-  // Get or set aria attribute
+  /**
+   * Get or set an ARIA attribute on all elements
+   * @param {string} param - The ARIA attribute name (without 'aria-' prefix)
+   * @param {string} [val] - The ARIA attribute value to set
+   * @returns {string|null|IO} The ARIA attribute value of the first element or the IO instance for chaining
+   */
   aria(param, val) {
     if (!param || typeof param !== 'string') {
       console.warn('aria: Invalid aria attribute');
@@ -407,12 +515,15 @@ class IO {
       }
       return null;
     }
-    return this.forEach(el => {
-      el.setAttribute(`aria-${param}`, val);
-    });
+    return this.forEach(el => el.setAttribute(`aria-${param}`, val));
   }
 
-  // Get or set data attribute
+  /**
+   * Get or set a data attribute on all elements
+   * @param {string} name - The data attribute name (without 'data-' prefix)
+   * @param {string|number} [value] - The data attribute value to set
+   * @returns {string|null|IO} The data attribute value of the first element or the IO instance for chaining
+   */
   data(name, value) {
     if (!name || typeof name !== 'string') {
       console.warn('data: Invalid data attribute name');
@@ -427,12 +538,15 @@ class IO {
       }
       return null;
     }
-    return this.forEach(el => {
-      el.dataset[name] = value;
-    });
+    return this.forEach(el => el.dataset[name] = value);
   }
 
-  // Add value to data attribute (numeric or string concatenation)
+  /**
+   * Add a value to a data attribute (numeric or string concatenation)
+   * @param {string} param - The data attribute name (without 'data-' prefix)
+   * @param {string|number} val - The value to add
+   * @returns {IO} The IO instance for chaining
+   */
   dataAdd(param, val) {
     if (!param || typeof param !== 'string' || val === undefined) {
       console.warn('dataAdd: Invalid parameter or value');
@@ -448,7 +562,12 @@ class IO {
     });
   }
 
-  // Subtract value from data attribute (numeric or string replacement)
+  /**
+   * Subtract a value from a data attribute (numeric or string replacement)
+   * @param {string} param - The data attribute name (without 'data-' prefix)
+   * @param {string|number} val - The value to subtract
+   * @returns {IO} The IO instance for chaining
+   */
   dataSub(param, val) {
     if (!param || typeof param !== 'string' || val === undefined) {
       console.warn('dataSub: Invalid parameter or value');
@@ -464,7 +583,10 @@ class IO {
     });
   }
 
-  // Get all data attributes of first element
+  /**
+   * Get all data attributes of the first element
+   * @returns {Array<Array<string>>} Array of key-value pairs of data attributes
+   */
   dataAll() {
     if (this.elements[0]) {
       return Object.entries(this.elements[0].dataset);
@@ -472,7 +594,11 @@ class IO {
     return [];
   }
 
-  // Get or set value of elements
+  /**
+   * Get or set the value of form elements
+   * @param {string|number} [value] - The value to set
+   * @returns {string|null|IO} The value of the first element or the IO instance for chaining
+   */
   val(value) {
     if (value === undefined) {
       if (this.elements[0] && (this.elements[0] instanceof HTMLInputElement || this.elements[0] instanceof HTMLSelectElement || this.elements[0] instanceof HTMLTextAreaElement)) {
@@ -489,8 +615,14 @@ class IO {
 
   /*** CSS Methods ***/
 
-  // Get or set CSS styles
-  css(prop, value) {
+  /**
+   * Get or set CSS styles on all elements
+   * @param {string|Object} prop - The CSS property name or object of properties
+   * @param {string} [value] - The CSS property value
+   * @param {boolean} [important=false] - Whether to apply !important to styles
+   * @returns {string|null|IO} The computed style value of the first element or the IO instance for chaining
+   */
+  css(prop, value, important = false) {
     if (typeof prop === 'string' && value === undefined) {
       if (this.elements[0]) {
         return getComputedStyle(this.elements[0])[prop];
@@ -505,11 +637,14 @@ class IO {
       if (typeof prop === 'object') {
         for (let key in prop) {
           if (key.startsWith('--')) {
-            el.style.setProperty(key, prop[key]);
+            el.style.setProperty(key, prop[key], important ? 'important' : '');
           } else {
             const camelKey = key.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
             if (camelKey in el.style) {
               el.style[camelKey] = prop[key];
+              if (important) {
+                el.style.setProperty(key, prop[key], 'important');
+              }
             } else {
               console.warn(`css: Invalid style property "${key}"`);
             }
@@ -517,11 +652,14 @@ class IO {
         }
       } else {
         if (prop.startsWith('--')) {
-          el.style.setProperty(prop, value);
+          el.style.setProperty(prop, value, important ? 'important' : '');
         } else {
           const camelProp = prop.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
           if (camelProp in el.style) {
             el.style[camelProp] = value;
+            if (important) {
+              el.style.setProperty(prop, value, 'important');
+            }
           } else {
             console.warn(`css: Invalid style property "${prop}"`);
           }
@@ -532,75 +670,144 @@ class IO {
 
   /*** Event Methods ***/
 
-  // Add event listener to all elements
+  /**
+   * Add an event listener to all elements
+   * @param {string} event - The event type
+   * @param {function} handler - The event handler
+   * @returns {IO} The IO instance for chaining
+   */
   on(event, handler) {
     if (!event || !handler || typeof event !== 'string' || typeof handler !== 'function') {
       console.warn('on: Invalid event or handler');
       return this;
     }
-    return this.forEach(el => {
-      el.addEventListener(event, handler);
-    });
+    return this.forEach(el => el.addEventListener(event, handler));
   }
 
-  // Remove event listener from all elements
+  /**
+   * Remove an event listener from all elements
+   * @param {string} event - The event type
+   * @param {function} handler - The event handler to remove
+   * @returns {IO} The IO instance for chaining
+   */
   off(event, handler) {
     if (!event || !handler || typeof event !== 'string' || typeof handler !== 'function') {
       console.warn('off: Invalid event or handler');
       return this;
     }
-    return this.forEach(el => {
-      el.removeEventListener(event, handler);
-    });
+    return this.forEach(el => el.removeEventListener(event, handler));
   }
 
-  // Trigger click or add click handler
-  click(handler) {
-    if (!handler) {
-      return this.forEach(el => {
-        el.click();
-      });
-    }
-    if (typeof handler !== 'function') {
-      console.warn('click: Invalid handler');
-      return this;
-    }
-    return this.forEach(el => {
-      el.addEventListener('click', handler);
-    });
+  /**
+   * Add a one-time event listener to all elements
+   * @param {string} event - The event type
+   * @param {function} handler - The event handler
+   * @returns {IO} The IO instance for chaining
+   */
+  once(event, handler) {
+    return this.forEach(el => el.addEventListener(event, handler, { once: true }));
   }
 
-  // Delegate event to matching selector
+  /**
+   * Delegate an event to elements matching a selector
+   * @param {string} event - The event type
+   * @param {string} selector - The CSS selector for target elements
+   * @param {function} handler - The event handler
+   * @returns {IO} The IO instance for chaining
+   */
   delegate(event, selector, handler) {
     if (!event || !selector || !handler || typeof event !== 'string' || typeof selector !== 'string' || typeof handler !== 'function') {
       console.warn('delegate: Invalid event, selector, or handler');
       return this;
     }
     return this.forEach(el => {
-      el.addEventListener(event, e => {
+      if (!el._ioDelegates) {
+        el._ioDelegates = new Map();
+      }
+      const wrapper = (e) => {
         const target = e.target.closest(selector);
         if (target && el.contains(target)) {
           handler.call(target, e);
         }
-      });
+      };
+      const key = `${event}::${selector}`;
+      if (!el._ioDelegates.has(key)) {
+        el._ioDelegates.set(key, new Map());
+      }
+      const handlersMap = el._ioDelegates.get(key);
+      if (!handlersMap.has(handler)) {
+        handlersMap.set(handler, wrapper);
+        el.addEventListener(event, wrapper);
+      }
     });
   }
 
-  // Trigger a custom or native event on all elements
-  trigger(eventType, options = { bubbles: true, cancelable: true }) {
+  /**
+   * Remove delegated event listeners
+   * @param {string} event - The event type
+   * @param {string} selector - The CSS selector
+   * @param {function} [handler] - Optional specific handler to remove
+   * @returns {IO} The IO instance for chaining
+   */
+  undelegate(event, selector, handler) {
+    if (!event || !selector || typeof event !== 'string' || typeof selector !== 'string') {
+      console.warn('undelegate: Invalid event or selector');
+      return this;
+    }
+    return this.forEach(el => {
+      if (!el._ioDelegates) {
+        return;
+      }
+      const key = `${event}::${selector}`;
+      const handlersMap = el._ioDelegates.get(key);
+      if (handlersMap) {
+        if (handler && typeof handler === 'function') {
+          const wrapper = handlersMap.get(handler);
+          if (wrapper) {
+            el.removeEventListener(event, wrapper);
+            handlersMap.delete(handler);
+          }
+          if (handlersMap.size === 0) {
+            el._ioDelegates.delete(key);
+          }
+        } else {
+          for (const wrapper of handlersMap.values()) {
+            el.removeEventListener(event, wrapper);
+          }
+          el._ioDelegates.delete(key);
+        }
+        if (el._ioDelegates.size === 0) {
+          delete el._ioDelegates;
+        }
+      }
+    });
+  }
+
+  /**
+   * Trigger a custom or native event on all elements
+   * @param {string} eventType - The event type
+   * @param {Object} [options={ bubbles: true, cancelable: true }] - Event options
+   * @param {any} [detail=null] - Custom event detail
+   * @returns {IO} The IO instance for chaining
+   */
+  trigger(eventType, options = { bubbles: true, cancelable: true }, detail = null) {
     if (!eventType || typeof eventType !== 'string') {
       console.warn('trigger: Invalid event type');
       return this;
     }
     return this.forEach(el => {
-      const event = new Event(eventType, options);
+      const event = detail ? new CustomEvent(eventType, { ...options, detail }) : new Event(eventType, options);
       el.dispatchEvent(event);
     });
   }
 
   /*** Search Methods ***/
 
-  // Find first element by selector within elements
+  /**
+   * Find the first element by selector within elements
+   * @param {string} target - The CSS selector
+   * @returns {IO} A new IO instance with the first matching element
+   */
   findBy(target) {
     if (!target || typeof target !== 'string') {
       console.warn('findBy: Invalid selector');
@@ -609,20 +816,31 @@ class IO {
     return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(target))).slice(0, 1));
   }
 
-  // Find all elements by selector within elements
+  /**
+   * Find all elements by selector within elements
+   * @param {string} target - The CSS selector
+   * @returns {IO} A new IO instance with all matching elements
+   */
   findAllBy(target) {
     if (!target || typeof target !== 'string') {
       console.warn('findAllBy: Invalid selector');
       return new IO([]);
     }
-    const found = [];
+    const results = [];
     for (const el of this.elements) {
-      found.push(...el.querySelectorAll(target));
+      const found = el.querySelectorAll(target);
+      for (let i = 0; i < found.length; i++) {
+        results.push(found[i]);
+      }
     }
-    return new IO(found);
+    return new IO(results);
   }
 
-  // Find first element by ID within document
+  /**
+   * Find the first element by ID within elements
+   * @param {string} id - The ID to find
+   * @returns {IO} A new IO instance with the first matching element
+   */
   findById(id) {
     if (!id || typeof id !== 'string') {
       console.warn('findById: Invalid ID');
@@ -635,7 +853,11 @@ class IO {
     }).slice(0, 1));
   }
 
-  // Find first element by class within elements
+  /**
+   * Find the first element by class within elements
+   * @param {string} className - The class name to find
+   * @returns {IO} A new IO instance with the first matching element
+   */
   findByClass(className) {
     if (!className || typeof className !== 'string') {
       console.warn('findByClass: Invalid class name');
@@ -644,7 +866,11 @@ class IO {
     return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(`.${className}`))).slice(0, 1));
   }
 
-  // Find all elements by class within elements
+  /**
+   * Find all elements by class within elements
+   * @param {string} className - The class name to find
+   * @returns {IO} A new IO instance with all matching elements
+   */
   findAllByClass(className) {
     if (!className || typeof className !== 'string') {
       console.warn('findAllByClass: Invalid class name');
@@ -653,7 +879,11 @@ class IO {
     return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(`.${className}`))));
   }
 
-  // Find first element by name attribute within elements
+  /**
+   * Find the first element by name attribute within elements
+   * @param {string} name - The name attribute to find
+   * @returns {IO} A new IO instance with the first matching element
+   */
   findByName(name) {
     if (!name || typeof name !== 'string') {
       console.warn('findByName: Invalid name');
@@ -662,7 +892,11 @@ class IO {
     return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(`[name="${name}"]`))).slice(0, 1));
   }
 
-  // Find all elements by name attribute within elements
+  /**
+   * Find all elements by name attribute within elements
+   * @param {string} name - The name attribute to find
+   * @returns {IO} A new IO instance with all matching elements
+   */
   findAllByName(name) {
     if (!name || typeof name !== 'string') {
       console.warn('findAllByName: Invalid name');
@@ -671,7 +905,11 @@ class IO {
     return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(`[name="${name}"]`))));
   }
 
-  // Find first element by type attribute within elements
+  /**
+   * Find the first element by type attribute within elements
+   * @param {string} type - The type attribute to find
+   * @returns {IO} A new IO instance with the first matching element
+   */
   findByType(type) {
     if (!type || typeof type !== 'string') {
       console.warn('findByType: Invalid type');
@@ -680,7 +918,11 @@ class IO {
     return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(`[type="${type}"]`))).slice(0, 1));
   }
 
-  // Find all elements by type attribute within elements
+  /**
+   * Find all elements by type attribute within elements
+   * @param {string} type - The type attribute to find
+   * @returns {IO} A new IO instance with all matching elements
+   */
   findAllByType(type) {
     if (!type || typeof type !== 'string') {
       console.warn('findAllByType: Invalid type');
@@ -689,7 +931,12 @@ class IO {
     return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(`[type="${type}"]`))));
   }
 
-  // Find first element by attribute within elements
+  /**
+   * Find the first element by attribute within elements
+   * @param {string} attr - The attribute name
+   * @param {string} [val] - The attribute value
+   * @returns {IO} A new IO instance with the first matching element
+   */
   findByAttr(attr, val) {
     if (!attr || typeof attr !== 'string') {
       console.warn('findByAttr: Invalid attribute');
@@ -699,7 +946,12 @@ class IO {
     return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(selector))).slice(0, 1));
   }
 
-  // Find all elements by attribute within elements
+  /**
+   * Find all elements by attribute within elements
+   * @param {string} attr - The attribute name
+   * @param {string} [val] - The attribute value
+   * @returns {IO} A new IO instance with all matching elements
+   */
   findAllByAttr(attr, val) {
     if (!attr || typeof attr !== 'string') {
       console.warn('findAllByAttr: Invalid attribute');
@@ -709,7 +961,11 @@ class IO {
     return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(selector))));
   }
 
-  // Find closest parent by ID
+  /**
+   * Find the closest parent by ID
+   * @param {string} id - The ID to find
+   * @returns {IO} A new IO instance with the closest matching parent
+   */
   findParentById(id) {
     if (!id || typeof id !== 'string') {
       console.warn('findParentById: Invalid ID');
@@ -719,7 +975,11 @@ class IO {
     return new IO(this.elements.map(el => el.closest(`#${safeId}`)).filter(Boolean));
   }
 
-  // Find closest parent by class
+  /**
+   * Find the closest parent by class
+   * @param {string} className - The class name to find
+   * @returns {IO} A new IO instance with the closest matching parent
+   */
   findParentByClass(className) {
     if (!className || typeof className !== 'string') {
       console.warn('findParentByClass: Invalid class name');
@@ -730,18 +990,22 @@ class IO {
 
   /*** Utility Methods ***/
 
-  // Check if value is empty based on strict list
+  /**
+   * Check if the value of the first element is empty
+   * @param {boolean} [strictZero=true] - Whether to treat 0 as empty
+   * @returns {boolean} True if the value is empty, false otherwise
+   */
   isEmptyValue(strictZero = true) {
     const value = this.val();
     return (typeof value === 'undefined' || ['false', 'null', false, null, ''].includes(value) || (strictZero && value === 0));
   }
 
-  // Check if value is not empty
-  isNotEmptyValue(strictZero = true) {
-    return !this.isEmptyValue(strictZero);
-  }
-
-  // Check if data attribute is empty based on strict list
+  /**
+   * Check if a data attribute of the first element is empty
+   * @param {string} param - The data attribute name (without 'data-' prefix)
+   * @param {boolean} [strictZero=true] - Whether to treat 0 as empty
+   * @returns {boolean} True if the data attribute is empty, false otherwise
+   */
   isEmptyData(param, strictZero = true) {
     if (!param || typeof param !== 'string') {
       console.warn('isEmptyData: Invalid parameter');
@@ -751,45 +1015,95 @@ class IO {
     return (typeof data === 'undefined' || ['false', 'null', false, null, ''].includes(data) || (strictZero && data === 0));
   }
 
-  // Check if data attribute is not empty
+  /**
+   * Check if the value of the first element is not empty
+   * @param {boolean} [strictZero=true] - Whether to treat 0 as empty
+   * @returns {boolean} True if the value is not empty, false otherwise
+   */
+  isNotEmptyValue(strictZero = true) {
+    return !this.isEmptyValue(strictZero);
+  }
+
+  /**
+   * Check if a data attribute of the first element is not empty
+   * @param {string} param - The data attribute name (without 'data-' prefix)
+   * @param {boolean} [strictZero=true] - Whether to treat 0 as empty
+   * @returns {boolean} True if the data attribute is not empty, false otherwise
+   */
   isNotEmptyData(param, strictZero = true) {
     return !this.isEmptyData(param, strictZero);
   }
 
-  // Check if any elements exist
+  /**
+   * Check if any elements exist in the collection
+   * @returns {boolean} True if elements exist, false otherwise
+   */
   exists() {
     return this.elements.length > 0;
   }
 
-  // Return first element as IO instance
+  /**
+   * Return the first element as a new IO instance
+   * @returns {IO} A new IO instance with the first element
+   */
   first() {
     return new IO(this.elements[0] ?? []);
   }
 
-  // Return last element as IO instance
+  /**
+   * Return the last element as a new IO instance
+   * @returns {IO} A new IO instance with the last element
+   */
   last() {
     return new IO(this.elements[this.elements.length - 1] ?? []);
   }
 
-  // Return element at index as IO instance
+  /**
+   * Return the element at the specified index as a new IO instance
+   * @param {number} index - The index of the element
+   * @returns {IO} A new IO instance with the element at the index
+   */
   eq(index) {
     return new IO(this.elements[index] ?? []);
   }
 
-  // Get number of elements
+  /**
+   * Clone all elements (deep clone optional)
+   * @param {boolean} [deep=true] - Whether to perform a deep clone including child nodes
+   * @returns {IO} A new IO instance containing the cloned elements
+   */
+  clone(deep = true) {
+    return new IO(this.elements.map(el => el.cloneNode(deep)));
+  }
+
+  /**
+   * Get the number of elements in the collection
+   * @returns {number} The number of elements
+   */
   count() {
     return this.elements.length;
   }
 
-  // Get raw DOM element at index
-  get(index) {
-    return this.elements[index] ?? null;
+  /**
+   * Escape a string for use in RegExp
+   * @param {string} str - The string to escape
+   * @returns {string} The escaped string
+   */
+  escapeRegExp(str) {
+    return str.toString().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
-  // Sanitize HTML string to prevent XSS, allowing safe HTML
+  /**
+   * Sanitize an HTML string to prevent XSS
+   * @param {string} str - The HTML string to sanitize
+   * @param {Object} [options] - Sanitization options
+   * @param {string[]} [options.allowedTags=['b', 'i', 'u', 'strong', 'em', 'p', 'div', 'span', 'a', 'br']] - Allowed HTML tags
+   * @param {string[]} [options.allowedAttributes=['src', 'href', 'class', 'id']] - Allowed HTML attributes
+   * @returns {string} The sanitized HTML string
+   */
   sanitizeXSS(str, options = {
     allowedTags: ['b', 'i', 'u', 'strong', 'em', 'p', 'div', 'span', 'a', 'br'],
-    allowedAttributes: ['href', 'class', 'id']
+    allowedAttributes: ['src', 'href', 'class', 'id']
   }) {
     if (typeof str !== 'string') {
       console.warn('sanitizeXSS: Invalid input, expected string');
@@ -808,7 +1122,10 @@ class IO {
         } else {
           Array.from(node.attributes).forEach(attr => {
             const attrName = attr.name.toLowerCase();
-            if (!allowedAttributes.includes(attrName) || (attrName === 'href' && /^(javascript|data):/i.test(attr.value)) || attrName.startsWith('on') || attrName === 'style') {
+            if (!allowedAttributes.includes(attrName) ||
+                (attrName === 'href' && /^(javascript|data):/i.test(attr.value)) ||
+                attrName.startsWith('on') ||
+                attrName === 'style') {
               node.removeAttribute(attr.name);
             }
           });
@@ -822,14 +1139,12 @@ class IO {
     Array.from(fragment.childNodes).forEach(sanitizeNode);
     return temp.innerHTML;
   }
-
-  // Escape string for use in RegExp
-  escapeRegExp(str) {
-    return str.toString().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }
 }
 
 /**
- * Shortcut function to create IO instance
+ * Shortcut function to create an IO instance
+ * @param {string|Element|NodeList|Array|Document} selector - The selector, element, NodeList, array of elements, or document
+ * @param {Document|Element} [context=document] - The context for querying elements
+ * @returns {IO} A new IO instance
  */
 const $io = (selector, context) => new IO(selector, context);

@@ -1,6 +1,6 @@
 {
   "name": "io",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "description": "Lightweight DOM utility library",
   "main": "dist/io.min.js",
   "scripts": {
