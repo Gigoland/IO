@@ -134,6 +134,87 @@ class IO {
   }
 
   /**
+   * Fade in all elements
+   * @param {number} [duration=400] - Animation duration in milliseconds
+   * @param {Function} [callback] - Function to call after animation completes
+   * @returns {IO} Current IO instance for chaining
+   */
+  fadeIn(duration = 400, callback = null) {
+    return this.forEach(el => {
+      // Remove any existing fade listener
+      if (el._ioFadeHandler) {
+        el.removeEventListener('transitionend', el._ioFadeHandler);
+      }
+      // Set initial state
+      el.style.opacity = '0';
+      el.style.display = el.dataset.ioDisplay || 'block';
+      el.offsetHeight; // Force reflow
+      el.style.transition = `opacity ${duration}ms ease-in-out`;
+      el.style.opacity = '1';
+      // Cleanup and callback
+      const handleTransitionEnd = () => {
+        el.style.transition = '';
+        el.removeEventListener('transitionend', handleTransitionEnd);
+        delete el._ioFadeHandler;
+        if (callback && typeof callback === 'function') {
+          callback.call(el, el);
+        }
+      };
+      el._ioFadeHandler = handleTransitionEnd;
+      el.addEventListener('transitionend', handleTransitionEnd);
+    });
+  }
+
+  /**
+   * Fade out all elements
+   * @param {number} [duration=400] - Animation duration in milliseconds
+   * @param {Function} [callback] - Function to call after animation completes
+   * @returns {IO} Current IO instance for chaining
+   */
+  fadeOut(duration = 400, callback = null) {
+    return this.forEach(el => {
+      // Remove any existing fade listener
+      if (el._ioFadeHandler) {
+        el.removeEventListener('transitionend', el._ioFadeHandler);
+      }
+      // Set transition
+      el.style.transition = `opacity ${duration}ms ease-in-out`;
+      el.style.opacity = '0';
+      // Hide and cleanup after animation
+      const handleTransitionEnd = () => {
+        el.style.display = 'none';
+        el.style.transition = '';
+        el.removeEventListener('transitionend', handleTransitionEnd);
+        delete el._ioFadeHandler;
+        if (callback && typeof callback === 'function') {
+          callback.call(el, el);
+        }
+      };
+      el._ioFadeHandler = handleTransitionEnd;
+      el.addEventListener('transitionend', handleTransitionEnd);
+    });
+  }
+
+  /**
+   * Toggle fade in/out based on visibility
+   * @param {number} [duration=400] - Animation duration in milliseconds
+   * @param {Function} [callback] - Function to call after animation completes
+   * @returns {IO} Current IO instance for chaining
+   */
+  fadeToggle(duration = 400, callback = null) {
+    this.elements.forEach(el => {
+      const isVisible = getComputedStyle(el).display !== 'none';
+      const instance = new IO(el);
+      if (isVisible) {
+        instance.fadeOut(duration, callback);
+      } else {
+        instance.fadeIn(duration, callback);
+      }
+    });
+    return this;
+  }
+
+  /**
    * Enable all elements by removing disabled state and styles
    * @returns {IO} The IO instance for chaining
    */
@@ -1068,12 +1149,17 @@ class IO {
   }
 
   /**
-   * Clone all elements (deep clone optional)
+   * Clone all elements (deep clone 1 setup events optional)
    * @param {boolean} [deep=true] - Whether to perform a deep clone including child nodes
+   * @param {Function} [setup] - Function to setup events on cloned elements
    * @returns {IO} A new IO instance containing the cloned elements
    */
-  clone(deep = true) {
-    return new IO(this.elements.map(el => el.cloneNode(deep)));
+  clone(deep = true, setup = null) {
+    const cloned = new IO(this.elements.map(el => el.cloneNode(deep)));
+    if (setup && typeof setup === 'function') {
+      setup(cloned);
+    }
+    return cloned;
   }
 
   /**
