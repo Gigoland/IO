@@ -1,6 +1,6 @@
 /**
  * IO - Modern lightweight DOM utility library
- * Version: 1.0.4
+ * Version: 1.0.5
  * Author: Gigoland.com
  * License: MIT License
  * Repository: https://github.com/Gigoland/IO
@@ -15,6 +15,12 @@ class IO {
   constructor(selector, context = document) {
     if (typeof selector === 'string') {
       selector = selector.trim();
+      if (selector.startsWith('<') && selector.endsWith('>')) {
+        const template = document.createElement('template');
+        template.innerHTML = selector;
+        this.elements = Array.from(template.content.children);
+        return;
+      }
       if (selector === 'body') {
         if (!(context instanceof Document) || !context.body) {
           console.warn('IO: Invalid context or document.body not available');
@@ -51,6 +57,7 @@ class IO {
       this.elements = [];
       console.warn('IO: Invalid selector type');
     }
+    this.elements ??= [];
   }
 
   /**
@@ -97,12 +104,27 @@ class IO {
   /*** Visibility Methods ***/
 
   /**
-   * Show all elements by resetting display or setting to block
-   * @param {boolean} [isEmpty=false] - Whether to reset display to empty string or use stored/dataset value
-   * @returns {IO} The IO instance for chaining
+   * Show elements with optional forced display value
+   * @param {boolean|string} [mode=false]
+   *   - false → default logic
+   *   - true  → reset display ('')
+   *   - string → force display value (e.g. 'flex', 'grid')
+   * @returns {IO}
    */
-  show(isEmpty = false) {
-    return this.forEach(el => el.style.display = isEmpty ? '' : (el.dataset.ioDisplay || 'block'));
+  show(mode = false) {
+    return this.forEach(el => {
+      // force display if string is provided
+      if (typeof mode === 'string') {
+        el.style.display = mode;
+        return;
+      }
+
+      const display = el.dataset.ioDisplay;
+
+      el.style.display = mode === true
+        ? ''
+        : (display && display !== 'none' ? display : 'block');
+    });
   }
 
   /**
