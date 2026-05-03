@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 - Placeholder for future changes.
 
+## [1.0.6] - 2026-05-03
+### Fixed
+- `htmlAppend` / `htmlPrepend` / `htmlBefore` / `htmlAfter` - `DocumentFragment` support
+
 ## [1.0.5] - 2025-12-24
 ### Added
 - Support for creating elements from HTML strings in the constructor (e.g., `$io('<div class="x">Hello</div>')`).

@@ -1,9 +1,9 @@
 /**
  * IO - Modern lightweight DOM utility library
- * Version: 1.0.5
- * Author: Gigoland.com
+ * Version: 1.0.6
+ * Author: Gigol.net
  * License: MIT License
- * Repository: https://github.com/Gigoland/IO
+ * Repository: https://github.com/GigolNet/IO
  * Description: Lightweight utility for DOM manipulation, events, attributes, CSS, and HTML handling. Users are responsible for sanitizing HTML input using sanitizeXSS manually.
  */
 class IO {
@@ -123,7 +123,8 @@ class IO {
 
       el.style.display = mode === true
         ? ''
-        : (display && display !== 'none' ? display : 'block');
+        : (display && display !== 'none' ? display : 'block')
+      ;
     });
   }
 
@@ -422,7 +423,7 @@ class IO {
     return this.forEach((el, i) => {
       if (typeof val === 'string') {
         el.insertAdjacentHTML('beforeend', val.trim());
-      } else if (val instanceof HTMLElement) {
+      } else if (val instanceof HTMLElement || val instanceof DocumentFragment) {
         const nodeToAppend = i < this.elements.length - 1 ? val.cloneNode(true) : val;
         el.appendChild(nodeToAppend);
       } else if (val instanceof IO) {
@@ -449,7 +450,7 @@ class IO {
     return this.forEach((el, i) => {
       if (typeof val === 'string') {
         el.insertAdjacentHTML('afterbegin', val.trim());
-      } else if (val instanceof HTMLElement) {
+      } else if (val instanceof HTMLElement || val instanceof DocumentFragment) {
         const nodeToPrepend = i < this.elements.length - 1 ? val.cloneNode(true) : val;
         el.insertBefore(nodeToPrepend, el.firstChild);
       } else if (val instanceof IO) {
@@ -478,7 +479,7 @@ class IO {
     return this.forEach((el, i) => {
       if (typeof val === 'string') {
         el.insertAdjacentHTML('beforebegin', val.trim());
-      } else if (val instanceof HTMLElement) {
+      } else if (val instanceof HTMLElement || val instanceof DocumentFragment) {
         const nodeToInsert = i < this.elements.length - 1 ? val.cloneNode(true) : val;
         el.parentNode.insertBefore(nodeToInsert, el);
       } else if (val instanceof IO) {
@@ -505,7 +506,7 @@ class IO {
     return this.forEach((el, i) => {
       if (typeof val === 'string') {
         el.insertAdjacentHTML('afterend', val.trim());
-      } else if (val instanceof HTMLElement) {
+      } else if (val instanceof HTMLElement || val instanceof DocumentFragment) {
         const nodeToInsert = i < this.elements.length - 1 ? val.cloneNode(true) : val;
         el.parentNode.insertBefore(nodeToInsert, el.nextSibling);
       } else if (val instanceof IO) {
@@ -534,7 +535,7 @@ class IO {
       if (typeof val === 'string') {
         el.insertAdjacentHTML('beforebegin', val.trim());
         el.remove();
-      } else if (val instanceof HTMLElement) {
+      } else if (val instanceof HTMLElement || val instanceof DocumentFragment) {
         const nodeToReplace = i < this.elements.length - 1 ? val.cloneNode(true) : val;
         el.parentNode.replaceChild(nodeToReplace, el);
       } else if (val instanceof IO) {
