@@ -1231,7 +1231,7 @@ class IO {
    * @param {Object} [options] - Sanitization options
    * @param {string[]} [options.allowedTags=['b', 'i', 'u', 'strong', 'em', 'p', 'div', 'span', 'a', 'br']] - Allowed HTML tags
    * @param {string[]} [options.allowedAttributes=['src', 'href', 'class', 'id']] - Allowed HTML attributes
-   * @returns {string} The sanitized HTML string
+   * @returns {string} - HTML-safe string
    */
   static sanitizeXSS(str, options = {
     allowedTags: ['b', 'i', 'u', 'strong', 'em', 'p', 'div', 'span', 'a', 'br'],
@@ -1244,8 +1244,6 @@ class IO {
     const { allowedTags, allowedAttributes } = options;
     const temp = document.createElement('div');
     temp.innerHTML = str;
-    const fragment = document.createDocumentFragment();
-    fragment.append(...temp.childNodes);
     const sanitizeNode = (node) => {
       if (node.nodeType === Node.ELEMENT_NODE) {
         const tagName = node.tagName.toLowerCase();
@@ -1254,10 +1252,11 @@ class IO {
         } else {
           Array.from(node.attributes).forEach(attr => {
             const attrName = attr.name.toLowerCase();
-            if (!allowedAttributes.includes(attrName) ||
-                (attrName === 'href' && /^(javascript|data):/i.test(attr.value)) ||
-                attrName.startsWith('on') ||
-                attrName === 'style') {
+            if (attrName === 'style'
+             || attrName.startsWith('on')
+             || (attrName === 'href' && /^(javascript|data):/i.test(attr.value))
+             || !allowedAttributes.includes(attrName)
+            ) {
               node.removeAttribute(attr.name);
             }
           });
@@ -1268,7 +1267,7 @@ class IO {
       }
       return node;
     };
-    Array.from(fragment.childNodes).forEach(sanitizeNode);
+    Array.from(temp.childNodes).forEach(sanitizeNode);
     return temp.innerHTML;
   }
 
