@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Fixed duplicate `transitionend` event execution during repeated fade animations
 - Improved fade animation cleanup for better memory management
 - Fixed display state restoration after `fadeOut` / `fadeIn` cycles
+- Fixed Bootstrap `.d-none` conflicts when restoring element visibility via `show`, `fadeIn`, and `toggleVisibility`
 
 ### Added
 - Added static `IO.plugin()` system for extending the library with custom methods

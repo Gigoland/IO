@@ -121,6 +121,7 @@ class IO {
 
       const display = el.dataset.ioDisplay;
 
+      el.classList.remove('d-none'); // Remove boostrap class
       el.style.display = mode === true
         ? ''
         : (display && display !== 'none' ? display : 'block')
@@ -149,6 +150,7 @@ class IO {
       if (currentDisplay === 'none') {
         const ioDisplay = el.dataset.ioDisplay || 'block';
         el.style.display = ioDisplay;
+        el.classList.remove('d-none'); // Remove boostrap class
       } else {
         el.dataset.ioDisplay = currentDisplay;
         el.style.display = 'none';
@@ -168,6 +170,7 @@ class IO {
       if (el._ioFadeHandler) {
         el.removeEventListener('transitionend', el._ioFadeHandler);
       }
+      el.classList.remove('d-none'); // Remove boostrap class
       // Set initial state
       el.style.opacity = '0';
       el.style.display = el.dataset.ioDisplay || 'block';
