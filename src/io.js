@@ -122,6 +122,9 @@ class IO {
       const display = el.dataset.ioDisplay;
 
       el.classList.remove('d-none'); // Remove boostrap class
+      if (getComputedStyle(el).opacity === '0') {
+        el.style.opacity = '1';
+      }
       el.style.display = mode === true
         ? ''
         : (display && display !== 'none' ? display : 'block')
@@ -151,6 +154,9 @@ class IO {
         const ioDisplay = el.dataset.ioDisplay || 'block';
         el.style.display = ioDisplay;
         el.classList.remove('d-none'); // Remove boostrap class
+        if (getComputedStyle(el).opacity === '0') {
+          el.style.opacity = '1';
+        }
       } else {
         el.dataset.ioDisplay = currentDisplay;
         el.style.display = 'none';
@@ -169,6 +175,12 @@ class IO {
       // Remove any existing fade listener
       if (el._ioFadeHandler) {
         el.removeEventListener('transitionend', el._ioFadeHandler);
+      }
+      if (getComputedStyle(el).display !== 'none') {
+        if (callback && typeof callback === 'function') {
+          callback.call(el, el);
+        }
+        return;
       }
       el.classList.remove('d-none'); // Remove boostrap class
       // Set initial state
@@ -203,7 +215,14 @@ class IO {
       if (el._ioFadeHandler) {
         el.removeEventListener('transitionend', el._ioFadeHandler);
       }
-      el.dataset.ioDisplay = getComputedStyle(el).display;
+      const ioDisplay = getComputedStyle(el).display;
+      if (ioDisplay === 'none') {
+        if (callback && typeof callback === 'function') {
+          callback.call(el, el);
+        }
+        return;
+      }
+      el.dataset.ioDisplay = ioDisplay;
       // Set transition
       el.style.transition = `opacity ${duration}ms ease-in-out`;
       el.style.opacity = '0';
@@ -409,7 +428,7 @@ class IO {
       if (typeof val === 'number' && !isNaN(parseFloat(currentText)) && Number.isFinite(parseFloat(currentText))) {
         el.innerHTML = (parseFloat(currentText) - val).toString();
       } else {
-        el.innerHTML = el.innerHTML.replace(new RegExp(this.escapeRegExp(String(val)), 'g'), '');
+        el.innerHTML = el.innerHTML.replace(new RegExp(IO.escapeRegExp(String(val)), 'g'), '');
       }
     });
   }
@@ -686,7 +705,7 @@ class IO {
       if (typeof val === 'number' && !isNaN(parseFloat(current)) && Number.isFinite(parseFloat(current))) {
         el.dataset[param] = (parseFloat(current) - val).toString();
       } else {
-        el.dataset[param] = current.replace(new RegExp(this.escapeRegExp(String(val)), 'g'), '');
+        el.dataset[param] = current.replace(new RegExp(IO.escapeRegExp(String(val)), 'g'), '');
       }
     });
   }
@@ -1202,7 +1221,7 @@ class IO {
    * @param {string} str - The string to escape
    * @returns {string} The escaped string
    */
-  escapeRegExp(str) {
+  static escapeRegExp(str) {
     return str.toString().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
@@ -1214,7 +1233,7 @@ class IO {
    * @param {string[]} [options.allowedAttributes=['src', 'href', 'class', 'id']] - Allowed HTML attributes
    * @returns {string} The sanitized HTML string
    */
-  sanitizeXSS(str, options = {
+  static sanitizeXSS(str, options = {
     allowedTags: ['b', 'i', 'u', 'strong', 'em', 'p', 'div', 'span', 'a', 'br'],
     allowedAttributes: ['src', 'href', 'class', 'id']
   }) {
