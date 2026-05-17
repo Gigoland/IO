@@ -1,10 +1,10 @@
 /**
  * IO - Modern lightweight DOM utility library
- * Version: 1.0.6
- * Author: Gigol.net
- * License: MIT License
- * Repository: https://github.com/GigolNet/IO
- * Description: Lightweight utility for DOM manipulation, events, attributes, CSS, and HTML handling. Users are responsible for sanitizing HTML input using sanitizeXSS manually.
+ * @version: 1.0.7
+ * @author Gigol.net
+ * @license: MIT License
+ * @see: https://github.com/GigolNet/IO
+ * @description: Lightweight utility for DOM manipulation, events, attributes, CSS, and HTML handling. Users are responsible for sanitizing HTML input using sanitizeXSS manually.
  */
 class IO {
   /**
@@ -107,7 +107,7 @@ class IO {
    * Show elements with optional forced display value
    * @param {boolean|string} [mode=false]
    *   - false → default logic
-   *   - true  → reset display ('')
+   *   - true → reset display ('')
    *   - string → force display value (e.g. 'flex', 'grid')
    * @returns {IO}
    */
@@ -200,6 +200,7 @@ class IO {
       if (el._ioFadeHandler) {
         el.removeEventListener('transitionend', el._ioFadeHandler);
       }
+      el.dataset.ioDisplay = getComputedStyle(el).display;
       // Set transition
       el.style.transition = `opacity ${duration}ms ease-in-out`;
       el.style.opacity = '0';
@@ -226,9 +227,8 @@ class IO {
    */
   fadeToggle(duration = 400, callback = null) {
     this.elements.forEach(el => {
-      const isVisible = getComputedStyle(el).display !== 'none';
       const instance = new IO(el);
-      if (isVisible) {
+      if (getComputedStyle(el).display !== 'none') {
         instance.fadeOut(duration, callback);
       } else {
         instance.fadeIn(duration, callback);
@@ -246,7 +246,7 @@ class IO {
       if ('disabled' in el) {
         el.disabled = false;
       }
-      el.style.pointerEvents = 'auto';
+      el.style.pointerEvents = el.dataset.ioPointerEvents || 'auto';
       el.classList.remove('disabled', 'opacity-25');
     });
   }
@@ -257,6 +257,7 @@ class IO {
    */
   disable() {
     return this.forEach(el => {
+      el.dataset.ioPointerEvents = getComputedStyle(el).pointerEvents;
       if ('disabled' in el) {
         el.disabled = true;
       }
@@ -1247,6 +1248,31 @@ class IO {
     };
     Array.from(fragment.childNodes).forEach(sanitizeNode);
     return temp.innerHTML;
+  }
+
+  /**
+   * Register a plugin method to the IO prototype
+   * @param {string} name - Plugin method name
+   * @param {Function} callback - Plugin callback function
+   * @returns {void}
+   */
+  static plugin(name, callback) {
+    if (typeof name !== 'string') {
+      console.warn('Plugin name must be string');
+      return;
+    }
+
+    if (typeof callback !== 'function') {
+      console.warn('Plugin callback must be function');
+      return;
+    }
+
+    if (Object.hasOwn(IO.prototype, name)) {
+      console.warn(`Plugin "${name}" already exists`);
+      return;
+    }
+
+    IO.prototype[name] = callback;
   }
 }
 

@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 - Placeholder for future changes.
 
+## [1.0.7] - 2026-05-17
+### Fixed
+- `fadeOut` now properly removes previous transition listeners before attaching new ones
+- Fixed duplicate `transitionend` event execution during repeated fade animations
+- Improved fade animation cleanup for better memory management
+- Fixed display state restoration after `fadeOut` / `fadeIn` cycles
+
+### Added
+- Added static `IO.plugin()` system for extending the library with custom methods
+
+### Improved
+- Improved plugin registration safety with duplicate method protection
+- Improved internal transition handling stability
+
 ## [1.0.6] - 2026-05-03
 ### Fixed
 - `htmlAppend` / `htmlPrepend` / `htmlBefore` / `htmlAfter` - `DocumentFragment` support
