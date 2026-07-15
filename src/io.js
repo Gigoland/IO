@@ -1,9 +1,9 @@
 /**
  * IO - Modern lightweight DOM utility library
- * @version: 1.0.7
+ * @version: 1.0.8
  * @author Gigol.net
  * @license: MIT License
- * @see: https://github.com/GigolNet/IO
+ * @see: https://github.com/Gigoland/IO
  * @description: Lightweight utility for DOM manipulation, events, attributes, CSS, and HTML handling. Users are responsible for sanitizing HTML input using sanitizeXSS manually.
  */
 class IO {
@@ -15,12 +15,15 @@ class IO {
   constructor(selector, context = document) {
     if (typeof selector === 'string') {
       selector = selector.trim();
+
       if (selector.startsWith('<') && selector.endsWith('>')) {
         const template = document.createElement('template');
         template.innerHTML = selector;
         this.elements = Array.from(template.content.children);
+
         return;
       }
+
       if (selector === 'body') {
         if (!(context instanceof Document) || !context.body) {
           console.warn('IO: Invalid context or document.body not available');
@@ -30,7 +33,11 @@ class IO {
         }
       } else if (/^#[^\s][\S]*$/.test(selector)) {
         const id = selector.slice(1);
-        const element = context.getElementById && !(context instanceof DocumentFragment) ? context.getElementById(id) : context.querySelector(`#${CSS.escape(id)}`);
+        const element = context.getElementById && !(context instanceof DocumentFragment)
+          ? context.getElementById(id)
+          : context.querySelector(`#${CSS.escape(id)}`)
+        ;
+
         if (element) {
           this.elements = [element];
         } else {
@@ -38,6 +45,7 @@ class IO {
         }
       } else {
         this.elements = Array.from(context.querySelectorAll(selector));
+
         if (this.elements.length === 0 && selector !== '') {
           console.warn(`IO: No elements found for selector "${selector}"`);
         }
@@ -57,6 +65,7 @@ class IO {
       this.elements = [];
       console.warn('IO: Invalid selector type');
     }
+
     this.elements ??= [];
   }
 
@@ -68,6 +77,7 @@ class IO {
    */
   forEach(callback, native = true) {
     this.elements.forEach((el, i) => callback.call(el, native ? el : new IO(el), i));
+
     return this;
   }
 
@@ -88,8 +98,10 @@ class IO {
   native(index = 0) {
     if (!Number.isInteger(index)) {
       console.warn('native: Index must be an integer');
+
       return null;
     }
+
     return this.elements[index] ?? null;
   }
 
@@ -116,15 +128,17 @@ class IO {
       // force display if string is provided
       if (typeof mode === 'string') {
         el.style.display = mode;
+
         return;
       }
 
       const display = el.dataset.ioDisplay;
-
       el.classList.remove('d-none'); // Remove boostrap class
+
       if (getComputedStyle(el).opacity === '0') {
         el.style.opacity = '1';
       }
+
       el.style.display = mode === true
         ? ''
         : (display && display !== 'none' ? display : 'block')
@@ -150,10 +164,12 @@ class IO {
   toggleVisibility() {
     return this.forEach(el => {
       const currentDisplay = getComputedStyle(el).display;
+
       if (currentDisplay === 'none') {
         const ioDisplay = el.dataset.ioDisplay || 'block';
         el.style.display = ioDisplay;
         el.classList.remove('d-none'); // Remove boostrap class
+
         if (getComputedStyle(el).opacity === '0') {
           el.style.opacity = '1';
         }
@@ -176,12 +192,15 @@ class IO {
       if (el._ioFadeHandler) {
         el.removeEventListener('transitionend', el._ioFadeHandler);
       }
+
       if (getComputedStyle(el).display !== 'none') {
         if (callback && typeof callback === 'function') {
           callback.call(el, el);
         }
+
         return;
       }
+
       el.classList.remove('d-none'); // Remove boostrap class
       // Set initial state
       el.style.opacity = '0';
@@ -189,15 +208,18 @@ class IO {
       el.offsetHeight; // Force reflow
       el.style.transition = `opacity ${duration}ms ease-in-out`;
       el.style.opacity = '1';
+
       // Cleanup and callback
       const handleTransitionEnd = () => {
         el.style.transition = '';
         el.removeEventListener('transitionend', handleTransitionEnd);
         delete el._ioFadeHandler;
+
         if (callback && typeof callback === 'function') {
           callback.call(el, el);
         }
       };
+
       el._ioFadeHandler = handleTransitionEnd;
       el.addEventListener('transitionend', handleTransitionEnd);
     });
@@ -215,27 +237,34 @@ class IO {
       if (el._ioFadeHandler) {
         el.removeEventListener('transitionend', el._ioFadeHandler);
       }
+
       const ioDisplay = getComputedStyle(el).display;
+
       if (ioDisplay === 'none') {
         if (callback && typeof callback === 'function') {
           callback.call(el, el);
         }
+
         return;
       }
+
       el.dataset.ioDisplay = ioDisplay;
       // Set transition
       el.style.transition = `opacity ${duration}ms ease-in-out`;
       el.style.opacity = '0';
+
       // Hide and cleanup after animation
       const handleTransitionEnd = () => {
         el.style.display = 'none';
         el.style.transition = '';
         el.removeEventListener('transitionend', handleTransitionEnd);
         delete el._ioFadeHandler;
+
         if (callback && typeof callback === 'function') {
           callback.call(el, el);
         }
       };
+
       el._ioFadeHandler = handleTransitionEnd;
       el.addEventListener('transitionend', handleTransitionEnd);
     });
@@ -250,12 +279,14 @@ class IO {
   fadeToggle(duration = 400, callback = null) {
     this.elements.forEach(el => {
       const instance = new IO(el);
+
       if (getComputedStyle(el).display !== 'none') {
         instance.fadeOut(duration, callback);
       } else {
         instance.fadeIn(duration, callback);
       }
     });
+
     return this;
   }
 
@@ -268,6 +299,7 @@ class IO {
       if ('disabled' in el) {
         el.disabled = false;
       }
+
       el.style.pointerEvents = el.dataset.ioPointerEvents || 'auto';
       el.classList.remove('disabled', 'opacity-25');
     });
@@ -280,9 +312,11 @@ class IO {
   disable() {
     return this.forEach(el => {
       el.dataset.ioPointerEvents = getComputedStyle(el).pointerEvents;
+
       if ('disabled' in el) {
         el.disabled = true;
       }
+
       el.style.pointerEvents = 'none';
       el.classList.add('disabled', 'opacity-25');
     });
@@ -291,66 +325,89 @@ class IO {
   /*** Class Methods ***/
 
   /**
-   * Add one or more classes to all elements
-   * @param {...string} classes - The classes to add
-   * @returns {IO} The IO instance for chaining
+   * Add one or more classes to all elements.
+   * @param {string|string[]} classes
+   * @returns {IO} The IO instance for chaining.
    */
-  addClass(...classes) {
-    if (!classes.length || classes.some(cls => !cls || typeof cls !== 'string' || !cls.trim())) {
+  addClass(classes) {
+    const classList = this.#normalizeClasses(classes);
+
+    if (!classList.length) {
       console.warn('addClass: Invalid class name(s)');
+
       return this;
     }
-    const classList = classes.flatMap(cls => cls.trim().split(/\s+/));
+
     this.elements.forEach(el => el.classList.add(...classList));
+
     return this;
   }
 
   /**
-   * Remove one or more classes from all elements
-   * @param {...string} classes - The classes to remove
-   * @returns {IO} The IO instance for chaining
+   * Remove one or more classes from all elements.
+   * @param {string|string[]} classes
+   * @returns {IO} The IO instance for chaining.
    */
-  removeClass(...classes) {
-    if (!classes.length || classes.some(cls => !cls || typeof cls !== 'string' || !cls.trim())) {
+  removeClass(classes) {
+    const classList = this.#normalizeClasses(classes);
+
+    if (!classList.length) {
       console.warn('removeClass: Invalid class name(s)');
+
       return this;
     }
-    const classList = classes.flatMap(cls => cls.trim().split(/\s+/));
+
     this.elements.forEach(el => el.classList.remove(...classList));
+
     return this;
   }
 
   /**
-   * Toggle one or more classes on all elements
-   * @param {...string} classes - The classes to toggle
-   * @returns {IO} The IO instance for chaining
+   * Toggle one or more classes on all elements.
+   * @param {string|string[]} classes
+   * @param {boolean} [isForce]
+   * @returns {IO} The IO instance for chaining.
    */
-  toggleClass(...classes) {
-    if (!classes.length || classes.some(cls => !cls || typeof cls !== 'string' || !cls.trim())) {
+  toggleClass(classes, isForce) {
+    const classList = this.#normalizeClasses(classes);
+
+    if (!classList.length) {
       console.warn('toggleClass: Invalid class name(s)');
+
       return this;
     }
-    const classList = classes.flatMap(cls => cls.trim().split(/\s+/));
+
     this.elements.forEach(el => {
-      classList.forEach(className => el.classList.toggle(className));
+      classList.forEach(className => {
+        if (arguments.length === 1) {
+          el.classList.toggle(className);
+        } else {
+          el.classList.toggle(className, isForce);
+        }
+      });
     });
+
     return this;
   }
 
   /**
-   * Check if the first element has all specified classes
-   * @param {...string} classes - The classes to check
-   * @returns {boolean} True if the first element has all classes, false otherwise
+   * Check if the first element has all specified classes.
+   * @param {string|string[]} classes
+   * @returns {boolean}
    */
-  hasClass(...classes) {
-    if (!classes.length || classes.some(cls => !cls || typeof cls !== 'string' || !cls.trim())) {
+  hasClass(classes) {
+    const classList = this.#normalizeClasses(classes);
+
+    if (!classList.length) {
       console.warn('hasClass: Invalid class name(s)');
+
       return false;
     }
-    if (this.elements[0]) {
-      return classes.every(cls => this.elements[0].classList.contains(cls.trim()));
-    }
-    return false;
+
+    return this.elements[0]
+      ? classList.every(className => this.elements[0].classList.contains(className))
+      : false
+    ;
   }
 
   /*** HTML & Text Methods ***/
@@ -365,12 +422,16 @@ class IO {
       if (this.elements[0]) {
         return this.elements[0].textContent;
       }
+
       return null;
     }
+
     if (typeof val !== 'string' && typeof val !== 'number') {
       console.warn('text: Invalid value, expected string or number');
+
       return this;
     }
+
     return this.forEach(el => el.textContent = val);
   }
 
@@ -384,12 +445,16 @@ class IO {
       if (this.elements[0]) {
         return this.elements[0].innerHTML;
       }
+
       return null;
     }
+
     if (typeof val !== 'string' && typeof val !== 'number') {
       console.warn('html: Invalid value, expected string or number');
+
       return this;
     }
+
     return this.forEach(el => el.innerHTML = String(val));
   }
 
@@ -401,10 +466,13 @@ class IO {
   htmlAdd(val) {
     if (typeof val !== 'string' && typeof val !== 'number') {
       console.warn('htmlAdd: Invalid value, expected string or number');
+
       return this;
     }
+
     return this.forEach(el => {
       const currentText = el.textContent.trim();
+
       if (typeof val === 'number' && !isNaN(parseFloat(currentText)) && Number.isFinite(parseFloat(currentText))) {
         el.innerHTML = (parseFloat(currentText) + val).toString();
       } else {
@@ -421,10 +489,13 @@ class IO {
   htmlSub(val) {
     if (typeof val !== 'string' && typeof val !== 'number') {
       console.warn('htmlSub: Invalid value, expected string or number');
+
       return this;
     }
+
     return this.forEach(el => {
       const currentText = el.textContent.trim();
+
       if (typeof val === 'number' && !isNaN(parseFloat(currentText)) && Number.isFinite(parseFloat(currentText))) {
         el.innerHTML = (parseFloat(currentText) - val).toString();
       } else {
@@ -441,8 +512,10 @@ class IO {
   htmlAppend(val) {
     if (val instanceof IO && val.elements.length === 0) {
       console.warn('htmlAppend: IO instance has no elements');
+
       return this;
     }
+
     return this.forEach((el, i) => {
       if (typeof val === 'string') {
         el.insertAdjacentHTML('beforeend', val.trim());
@@ -468,8 +541,10 @@ class IO {
   htmlPrepend(val) {
     if (val instanceof IO && val.elements.length === 0) {
       console.warn('htmlPrepend: IO instance has no elements');
+
       return this;
     }
+
     return this.forEach((el, i) => {
       if (typeof val === 'string') {
         el.insertAdjacentHTML('afterbegin', val.trim());
@@ -497,8 +572,10 @@ class IO {
   htmlBefore(val) {
     if (val instanceof IO && val.elements.length === 0) {
       console.warn('htmlBefore: IO instance has no elements');
+
       return this;
     }
+
     return this.forEach((el, i) => {
       if (typeof val === 'string') {
         el.insertAdjacentHTML('beforebegin', val.trim());
@@ -524,8 +601,10 @@ class IO {
   htmlAfter(val) {
     if (val instanceof IO && val.elements.length === 0) {
       console.warn('htmlAfter: IO instance has no elements');
+
       return this;
     }
+
     return this.forEach((el, i) => {
       if (typeof val === 'string') {
         el.insertAdjacentHTML('afterend', val.trim());
@@ -552,8 +631,10 @@ class IO {
   htmlReplace(val) {
     if (val instanceof IO && val.elements.length === 0) {
       console.warn('htmlReplace: IO instance has no elements');
+
       return this;
     }
+
     return this.forEach((el, i) => {
       if (typeof val === 'string') {
         el.insertAdjacentHTML('beforebegin', val.trim());
@@ -595,17 +676,22 @@ class IO {
   attr(name, value) {
     if (!name || typeof name !== 'string') {
       console.warn('attr: Invalid attribute name');
+
       if (value === undefined) {
         return null;
       }
+
       return this;
     }
+
     if (value === undefined) {
       if (this.elements[0]) {
         return this.elements[0].getAttribute(name);
       }
+
       return null;
     }
+
     return this.forEach(el => el.setAttribute(name, value));
   }
 
@@ -617,8 +703,10 @@ class IO {
   removeAttr(name) {
     if (!name || typeof name !== 'string') {
       console.warn('removeAttr: Invalid attribute name');
+
       return this;
     }
+
     return this.forEach(el => el.removeAttribute(name));
   }
 
@@ -631,17 +719,22 @@ class IO {
   aria(param, val) {
     if (!param || typeof param !== 'string') {
       console.warn('aria: Invalid aria attribute');
+
       if (val === undefined) {
         return null;
       }
+
       return this;
     }
+
     if (val === undefined) {
       if (this.elements[0]) {
         return this.elements[0].getAttribute(`aria-${param}`);
       }
+
       return null;
     }
+
     return this.forEach(el => el.setAttribute(`aria-${param}`, val));
   }
 
@@ -654,17 +747,22 @@ class IO {
   data(name, value) {
     if (!name || typeof name !== 'string') {
       console.warn('data: Invalid data attribute name');
+
       if (value === undefined) {
         return null;
       }
+
       return this;
     }
+
     if (value === undefined) {
       if (this.elements[0]) {
         return this.elements[0].dataset[name];
       }
+
       return null;
     }
+
     return this.forEach(el => el.dataset[name] = value);
   }
 
@@ -677,10 +775,13 @@ class IO {
   dataAdd(param, val) {
     if (!param || typeof param !== 'string' || val === undefined) {
       console.warn('dataAdd: Invalid parameter or value');
+
       return this;
     }
+
     return this.forEach(el => {
       const current = el.dataset[param] || '';
+
       if (typeof val === 'number' && !isNaN(parseFloat(current)) && Number.isFinite(parseFloat(current))) {
         el.dataset[param] = (parseFloat(current) + val).toString();
       } else {
@@ -698,10 +799,13 @@ class IO {
   dataSub(param, val) {
     if (!param || typeof param !== 'string' || val === undefined) {
       console.warn('dataSub: Invalid parameter or value');
+
       return this;
     }
+
     return this.forEach(el => {
       const current = el.dataset[param] || '';
+
       if (typeof val === 'number' && !isNaN(parseFloat(current)) && Number.isFinite(parseFloat(current))) {
         el.dataset[param] = (parseFloat(current) - val).toString();
       } else {
@@ -718,6 +822,7 @@ class IO {
     if (this.elements[0]) {
       return Object.entries(this.elements[0].dataset);
     }
+
     return [];
   }
 
@@ -728,13 +833,22 @@ class IO {
    */
   val(value) {
     if (value === undefined) {
-      if (this.elements[0] && (this.elements[0] instanceof HTMLInputElement || this.elements[0] instanceof HTMLSelectElement || this.elements[0] instanceof HTMLTextAreaElement)) {
+      if (this.elements[0] && (
+           this.elements[0] instanceof HTMLInputElement
+        || this.elements[0] instanceof HTMLSelectElement
+        || this.elements[0] instanceof HTMLTextAreaElement
+      )) {
         return this.elements[0].value;
       }
+
       return null;
     }
+
     return this.forEach(el => {
-      if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement) {
+      if (el instanceof HTMLInputElement
+       || el instanceof HTMLSelectElement
+       || el instanceof HTMLTextAreaElement
+      ) {
         el.value = value != null ? String(value) : '';
       }
     });
@@ -754,12 +868,16 @@ class IO {
       if (this.elements[0]) {
         return getComputedStyle(this.elements[0])[prop];
       }
+
       return null;
     }
+
     if (typeof prop !== 'string' && typeof prop !== 'object') {
       console.warn('css: Invalid property');
+
       return this;
     }
+
     return this.forEach(el => {
       if (typeof prop === 'object') {
         for (let key in prop) {
@@ -767,8 +885,10 @@ class IO {
             el.style.setProperty(key, prop[key], important ? 'important' : '');
           } else {
             const camelKey = key.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+
             if (camelKey in el.style) {
               el.style[camelKey] = prop[key];
+
               if (important) {
                 el.style.setProperty(key, prop[key], 'important');
               }
@@ -782,8 +902,10 @@ class IO {
           el.style.setProperty(prop, value, important ? 'important' : '');
         } else {
           const camelProp = prop.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+
           if (camelProp in el.style) {
             el.style[camelProp] = value;
+
             if (important) {
               el.style.setProperty(prop, value, 'important');
             }
@@ -806,8 +928,10 @@ class IO {
   on(event, handler) {
     if (!event || !handler || typeof event !== 'string' || typeof handler !== 'function') {
       console.warn('on: Invalid event or handler');
+
       return this;
     }
+
     return this.forEach(el => el.addEventListener(event, handler));
   }
 
@@ -820,8 +944,10 @@ class IO {
   off(event, handler) {
     if (!event || !handler || typeof event !== 'string' || typeof handler !== 'function') {
       console.warn('off: Invalid event or handler');
+
       return this;
     }
+
     return this.forEach(el => el.removeEventListener(event, handler));
   }
 
@@ -845,23 +971,31 @@ class IO {
   delegate(event, selector, handler) {
     if (!event || !selector || !handler || typeof event !== 'string' || typeof selector !== 'string' || typeof handler !== 'function') {
       console.warn('delegate: Invalid event, selector, or handler');
+
       return this;
     }
+
     return this.forEach(el => {
       if (!el._ioDelegates) {
         el._ioDelegates = new Map();
       }
+
       const wrapper = (e) => {
         const target = e.target.closest(selector);
+
         if (target && el.contains(target)) {
           handler.call(target, e);
         }
       };
+
       const key = `${event}::${selector}`;
+
       if (!el._ioDelegates.has(key)) {
         el._ioDelegates.set(key, new Map());
       }
+
       const handlersMap = el._ioDelegates.get(key);
+
       if (!handlersMap.has(handler)) {
         handlersMap.set(handler, wrapper);
         el.addEventListener(event, wrapper);
@@ -879,21 +1013,27 @@ class IO {
   undelegate(event, selector, handler) {
     if (!event || !selector || typeof event !== 'string' || typeof selector !== 'string') {
       console.warn('undelegate: Invalid event or selector');
+
       return this;
     }
+
     return this.forEach(el => {
       if (!el._ioDelegates) {
         return;
       }
+
       const key = `${event}::${selector}`;
       const handlersMap = el._ioDelegates.get(key);
+
       if (handlersMap) {
         if (handler && typeof handler === 'function') {
           const wrapper = handlersMap.get(handler);
+
           if (wrapper) {
             el.removeEventListener(event, wrapper);
             handlersMap.delete(handler);
           }
+
           if (handlersMap.size === 0) {
             el._ioDelegates.delete(key);
           }
@@ -901,8 +1041,10 @@ class IO {
           for (const wrapper of handlersMap.values()) {
             el.removeEventListener(event, wrapper);
           }
+
           el._ioDelegates.delete(key);
         }
+
         if (el._ioDelegates.size === 0) {
           delete el._ioDelegates;
         }
@@ -920,8 +1062,10 @@ class IO {
   trigger(eventType, options = { bubbles: true, cancelable: true }, detail = null) {
     if (!eventType || typeof eventType !== 'string') {
       console.warn('trigger: Invalid event type');
+
       return this;
     }
+
     return this.forEach(el => {
       const event = detail ? new CustomEvent(eventType, { ...options, detail }) : new Event(eventType, options);
       el.dispatchEvent(event);
@@ -938,8 +1082,10 @@ class IO {
   findBy(target) {
     if (!target || typeof target !== 'string') {
       console.warn('findBy: Invalid selector');
+
       return new IO([]);
     }
+
     return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(target))).slice(0, 1));
   }
 
@@ -951,15 +1097,20 @@ class IO {
   findAllBy(target) {
     if (!target || typeof target !== 'string') {
       console.warn('findAllBy: Invalid selector');
+
       return new IO([]);
     }
+
     const results = [];
+
     for (const el of this.elements) {
       const found = el.querySelectorAll(target);
+
       for (let i = 0; i < found.length; i++) {
         results.push(found[i]);
       }
     }
+
     return new IO(results);
   }
 
@@ -971,11 +1122,15 @@ class IO {
   findById(id) {
     if (!id || typeof id !== 'string') {
       console.warn('findById: Invalid ID');
+
       return new IO([]);
     }
+
     const safeId = CSS.escape(id);
+
     return new IO(this.elements.flatMap(el => {
       const found = el.querySelector(`#${safeId}`);
+
       return found ? [found] : [];
     }).slice(0, 1));
   }
@@ -988,8 +1143,10 @@ class IO {
   findByClass(className) {
     if (!className || typeof className !== 'string') {
       console.warn('findByClass: Invalid class name');
+
       return new IO([]);
     }
+
     return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(`.${className}`))).slice(0, 1));
   }
 
@@ -1001,8 +1158,10 @@ class IO {
   findAllByClass(className) {
     if (!className || typeof className !== 'string') {
       console.warn('findAllByClass: Invalid class name');
+
       return new IO([]);
     }
+
     return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(`.${className}`))));
   }
 
@@ -1014,8 +1173,10 @@ class IO {
   findByName(name) {
     if (!name || typeof name !== 'string') {
       console.warn('findByName: Invalid name');
+
       return new IO([]);
     }
+
     return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(`[name="${name}"]`))).slice(0, 1));
   }
 
@@ -1027,8 +1188,10 @@ class IO {
   findAllByName(name) {
     if (!name || typeof name !== 'string') {
       console.warn('findAllByName: Invalid name');
+
       return new IO([]);
     }
+
     return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(`[name="${name}"]`))));
   }
 
@@ -1040,8 +1203,10 @@ class IO {
   findByType(type) {
     if (!type || typeof type !== 'string') {
       console.warn('findByType: Invalid type');
+
       return new IO([]);
     }
+
     return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(`[type="${type}"]`))).slice(0, 1));
   }
 
@@ -1053,8 +1218,10 @@ class IO {
   findAllByType(type) {
     if (!type || typeof type !== 'string') {
       console.warn('findAllByType: Invalid type');
+
       return new IO([]);
     }
+
     return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(`[type="${type}"]`))));
   }
 
@@ -1067,9 +1234,12 @@ class IO {
   findByAttr(attr, val) {
     if (!attr || typeof attr !== 'string') {
       console.warn('findByAttr: Invalid attribute');
+
       return new IO([]);
     }
+
     const selector = val !== undefined ? `[${attr}="${val}"]` : `[${attr}]`;
+
     return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(selector))).slice(0, 1));
   }
 
@@ -1082,9 +1252,12 @@ class IO {
   findAllByAttr(attr, val) {
     if (!attr || typeof attr !== 'string') {
       console.warn('findAllByAttr: Invalid attribute');
+
       return new IO([]);
     }
+
     const selector = val !== undefined ? `[${attr}="${val}"]` : `[${attr}]`;
+
     return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(selector))));
   }
 
@@ -1096,9 +1269,12 @@ class IO {
   findParentById(id) {
     if (!id || typeof id !== 'string') {
       console.warn('findParentById: Invalid ID');
+
       return new IO([]);
     }
+
     const safeId = CSS.escape(id);
+
     return new IO(this.elements.map(el => el.closest(`#${safeId}`)).filter(Boolean));
   }
 
@@ -1110,8 +1286,10 @@ class IO {
   findParentByClass(className) {
     if (!className || typeof className !== 'string') {
       console.warn('findParentByClass: Invalid class name');
+
       return new IO([]);
     }
+
     return new IO(this.elements.map(el => el.closest(`.${className}`)).filter(Boolean));
   }
 
@@ -1124,6 +1302,7 @@ class IO {
    */
   isEmptyValue(strictZero = true) {
     const value = this.val();
+
     return (typeof value === 'undefined' || ['false', 'null', false, null, ''].includes(value) || (strictZero && value === 0));
   }
 
@@ -1136,9 +1315,12 @@ class IO {
   isEmptyData(param, strictZero = true) {
     if (!param || typeof param !== 'string') {
       console.warn('isEmptyData: Invalid parameter');
+
       return true;
     }
+
     const data = this.data(param);
+
     return (typeof data === 'undefined' || ['false', 'null', false, null, ''].includes(data) || (strictZero && data === 0));
   }
 
@@ -1202,9 +1384,11 @@ class IO {
    */
   clone(deep = true, setup = null) {
     const cloned = new IO(this.elements.map(el => el.cloneNode(deep)));
+
     if (setup && typeof setup === 'function') {
       setup(cloned);
     }
+
     return cloned;
   }
 
@@ -1239,19 +1423,24 @@ class IO {
   }) {
     if (typeof str !== 'string') {
       console.warn('sanitizeXSS: Invalid input, expected string');
+
       return '';
     }
+
     const { allowedTags, allowedAttributes } = options;
     const temp = document.createElement('div');
     temp.innerHTML = str;
+
     const sanitizeNode = (node) => {
       if (node.nodeType === Node.ELEMENT_NODE) {
         const tagName = node.tagName.toLowerCase();
+
         if (!allowedTags.includes(tagName)) {
           node.replaceWith(...Array.from(node.childNodes).map(sanitizeNode));
         } else {
           Array.from(node.attributes).forEach(attr => {
             const attrName = attr.name.toLowerCase();
+
             if (attrName === 'style'
              || attrName.startsWith('on')
              || (attrName === 'href' && /^(javascript|data):/i.test(attr.value))
@@ -1265,9 +1454,12 @@ class IO {
       } else if (node.nodeType === Node.TEXT_NODE) {
         node.textContent = node.textContent.replace(/(javascript|data):/gi, '');
       }
+
       return node;
     };
+
     Array.from(temp.childNodes).forEach(sanitizeNode);
+
     return temp.innerHTML;
   }
 
@@ -1280,20 +1472,47 @@ class IO {
   static plugin(name, callback) {
     if (typeof name !== 'string') {
       console.warn('Plugin name must be string');
+
       return;
     }
 
     if (typeof callback !== 'function') {
       console.warn('Plugin callback must be function');
+
       return;
     }
 
     if (Object.hasOwn(IO.prototype, name)) {
       console.warn(`Plugin "${name}" already exists`);
+
       return;
     }
 
     IO.prototype[name] = callback;
+  }
+
+  /*** Private Methods ***/
+
+  /**
+   * Normalizes class names into an array.
+   *
+   * @param {string|string[]} classes
+   * @returns {string[]}
+   */
+  #normalizeClasses(classes) {
+    if (typeof classes === 'string') {
+      return classes.trim().split(/\s+/).filter(Boolean);
+    }
+
+    if (Array.isArray(classes)) {
+      return classes
+        .filter(cls => typeof cls === 'string')
+        .flatMap(cls => cls.trim().split(/\s+/))
+        .filter(Boolean)
+      ;
+    }
+
+    return [];
   }
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "io",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Lightweight DOM utility library",
   "main": "dist/io.min.js",
   "scripts": {
@@ -10,7 +10,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/GigolNet/IO.git"
+    "url": "https://github.com/Gigoland/IO.git"
   },
   "devDependencies": {
     "uglify-js": "^3.17.4"

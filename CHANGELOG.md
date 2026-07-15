@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 - Placeholder for future changes.
 
+## [1.0.8] - 2026-07-15
+### Added
+- Added internal `#normalizeClasses()` helper for consistent class name normalization.
+
+### Changed
+- Unified `addClass`, `removeClass`, `toggleClass`, and `hasClass` APIs to accept a string or an array of class names.
+- `toggleClass()` now supports the optional `force` parameter, matching the native `DOMTokenList.toggle()` behavior.
+- Improved class handling consistency across all class manipulation methods.
+
 ## [1.0.7] - 2026-05-17
 ### Fixed
 - `fadeOut` now properly removes previous transition listeners before attaching new ones
