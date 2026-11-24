@@ -1,6 +1,6 @@
 /**
  * IO - Modern lightweight DOM utility library
- * @version: 1.0.8
+ * @version: 1.0.9
  * @author Gigol.net
  * @license: MIT License
  * @see: https://github.com/Gigoland/IO
@@ -8,11 +8,33 @@
  */
 class IO {
   /**
+   * Log warnings to the console (invalid arguments, empty selectors...). Off by default.
+   * @type {boolean}
+   */
+  static debug = false;
+
+  /** Tags removed together with their content by sanitizeXSS. */
+  static #DROP_WITH_CONTENT = ['script', 'style', 'template', 'iframe', 'frame', 'frameset', 'object', 'embed', 'noscript', 'noembed', 'xmp', 'svg', 'math'];
+
+  /** Attributes holding a URL, checked against the allowed schemes by sanitizeXSS. */
+  static #URL_ATTRIBUTES = ['href', 'src', 'xlink:href', 'action', 'formaction', 'srcset', 'poster', 'background'];
+
+  /** Elements exposing a "value" property. */
+  static #VALUE_ELEMENTS = ['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON', 'OPTION', 'OUTPUT', 'DATA'];
+
+  /**
    * Initialize elements based on selector type
    * @param {string|Element|NodeList|Array|Document} selector - The selector, element, NodeList, array of elements, or document
    * @param {Document|Element} [context=document] - The context for querying elements
    */
   constructor(selector, context = document) {
+    // $io() without argument is a valid empty collection (used to reach helper methods).
+    if (selector === undefined || selector === null) {
+      this.elements = [];
+
+      return;
+    }
+
     if (typeof selector === 'string') {
       selector = selector.trim();
 
@@ -26,12 +48,13 @@ class IO {
 
       if (selector === 'body') {
         if (!(context instanceof Document) || !context.body) {
-          console.warn('IO: Invalid context or document.body not available');
+          IO.#warn('IO: Invalid context or document.body not available');
           this.elements = [];
         } else {
           this.elements = [context.body];
         }
-      } else if (/^#[^\s][\S]*$/.test(selector)) {
+      } else if (/^#[^\s.#[\]:>+~,()='"\\*|^$]+$/.test(selector)) {
+        // Fast path only for a plain id: "#menu.open" or "#a > b" go through querySelectorAll.
         const id = selector.slice(1);
         const element = context.getElementById && !(context instanceof DocumentFragment)
           ? context.getElementById(id)
@@ -47,14 +70,14 @@ class IO {
         this.elements = Array.from(context.querySelectorAll(selector));
 
         if (this.elements.length === 0 && selector !== '') {
-          console.warn(`IO: No elements found for selector "${selector}"`);
+          IO.#warn(`IO: No elements found for selector "${selector}"`);
         }
       }
     } else if (selector instanceof Element) {
       this.elements = [selector];
     } else if (selector instanceof Document) {
       if (!selector.body) {
-        console.warn('IO: document.body is not available');
+        IO.#warn('IO: document.body is not available');
         this.elements = [];
       } else {
         this.elements = [selector.body];
@@ -63,7 +86,7 @@ class IO {
       this.elements = Array.from(selector).filter(el => el instanceof Element);
     } else {
       this.elements = [];
-      console.warn('IO: Invalid selector type');
+      IO.#warn('IO: Invalid selector type');
     }
 
     this.elements ??= [];
@@ -97,7 +120,7 @@ class IO {
    */
   native(index = 0) {
     if (!Number.isInteger(index)) {
-      console.warn('native: Index must be an integer');
+      IO.#warn('native: Index must be an integer');
 
       return null;
     }
@@ -333,7 +356,7 @@ class IO {
     const classList = this.#normalizeClasses(classes);
 
     if (!classList.length) {
-      console.warn('addClass: Invalid class name(s)');
+      IO.#warn('addClass: Invalid class name(s)');
 
       return this;
     }
@@ -352,7 +375,7 @@ class IO {
     const classList = this.#normalizeClasses(classes);
 
     if (!classList.length) {
-      console.warn('removeClass: Invalid class name(s)');
+      IO.#warn('removeClass: Invalid class name(s)');
 
       return this;
     }
@@ -372,7 +395,7 @@ class IO {
     const classList = this.#normalizeClasses(classes);
 
     if (!classList.length) {
-      console.warn('toggleClass: Invalid class name(s)');
+      IO.#warn('toggleClass: Invalid class name(s)');
 
       return this;
     }
@@ -399,7 +422,7 @@ class IO {
     const classList = this.#normalizeClasses(classes);
 
     if (!classList.length) {
-      console.warn('hasClass: Invalid class name(s)');
+      IO.#warn('hasClass: Invalid class name(s)');
 
       return false;
     }
@@ -427,7 +450,7 @@ class IO {
     }
 
     if (typeof val !== 'string' && typeof val !== 'number') {
-      console.warn('text: Invalid value, expected string or number');
+      IO.#warn('text: Invalid value, expected string or number');
 
       return this;
     }
@@ -450,7 +473,7 @@ class IO {
     }
 
     if (typeof val !== 'string' && typeof val !== 'number') {
-      console.warn('html: Invalid value, expected string or number');
+      IO.#warn('html: Invalid value, expected string or number');
 
       return this;
     }
@@ -465,7 +488,7 @@ class IO {
    */
   htmlAdd(val) {
     if (typeof val !== 'string' && typeof val !== 'number') {
-      console.warn('htmlAdd: Invalid value, expected string or number');
+      IO.#warn('htmlAdd: Invalid value, expected string or number');
 
       return this;
     }
@@ -488,7 +511,7 @@ class IO {
    */
   htmlSub(val) {
     if (typeof val !== 'string' && typeof val !== 'number') {
-      console.warn('htmlSub: Invalid value, expected string or number');
+      IO.#warn('htmlSub: Invalid value, expected string or number');
 
       return this;
     }
@@ -511,7 +534,7 @@ class IO {
    */
   htmlAppend(val) {
     if (val instanceof IO && val.elements.length === 0) {
-      console.warn('htmlAppend: IO instance has no elements');
+      IO.#warn('htmlAppend: IO instance has no elements');
 
       return this;
     }
@@ -528,7 +551,7 @@ class IO {
           el.appendChild(shouldClone ? child.cloneNode(true) : child);
         });
       } else {
-        console.warn('htmlAppend: Invalid value', val);
+        IO.#warn('htmlAppend: Invalid value', val);
       }
     });
   }
@@ -540,7 +563,7 @@ class IO {
    */
   htmlPrepend(val) {
     if (val instanceof IO && val.elements.length === 0) {
-      console.warn('htmlPrepend: IO instance has no elements');
+      IO.#warn('htmlPrepend: IO instance has no elements');
 
       return this;
     }
@@ -559,7 +582,7 @@ class IO {
           el.insertBefore(shouldClone ? child.cloneNode(true) : child, el.firstChild);
         });
       } else {
-        console.warn('htmlPrepend: Invalid value', val);
+        IO.#warn('htmlPrepend: Invalid value', val);
       }
     });
   }
@@ -571,7 +594,7 @@ class IO {
    */
   htmlBefore(val) {
     if (val instanceof IO && val.elements.length === 0) {
-      console.warn('htmlBefore: IO instance has no elements');
+      IO.#warn('htmlBefore: IO instance has no elements');
 
       return this;
     }
@@ -588,7 +611,7 @@ class IO {
           el.parentNode.insertBefore(shouldClone ? child.cloneNode(true) : child, el);
         });
       } else {
-        console.warn('htmlBefore: Invalid value', val);
+        IO.#warn('htmlBefore: Invalid value', val);
       }
     });
   }
@@ -600,7 +623,7 @@ class IO {
    */
   htmlAfter(val) {
     if (val instanceof IO && val.elements.length === 0) {
-      console.warn('htmlAfter: IO instance has no elements');
+      IO.#warn('htmlAfter: IO instance has no elements');
 
       return this;
     }
@@ -618,7 +641,7 @@ class IO {
           el.parentNode.insertBefore(shouldClone ? child.cloneNode(true) : child, el.nextSibling);
         });
       } else {
-        console.warn('htmlAfter: Invalid value', val);
+        IO.#warn('htmlAfter: Invalid value', val);
       }
     });
   }
@@ -630,7 +653,7 @@ class IO {
    */
   htmlReplace(val) {
     if (val instanceof IO && val.elements.length === 0) {
-      console.warn('htmlReplace: IO instance has no elements');
+      IO.#warn('htmlReplace: IO instance has no elements');
 
       return this;
     }
@@ -650,7 +673,7 @@ class IO {
         });
         parent.removeChild(el);
       } else {
-        console.warn('htmlReplace: Invalid value', val);
+        IO.#warn('htmlReplace: Invalid value', val);
       }
     });
   }
@@ -675,7 +698,7 @@ class IO {
    */
   attr(name, value) {
     if (!name || typeof name !== 'string') {
-      console.warn('attr: Invalid attribute name');
+      IO.#warn('attr: Invalid attribute name');
 
       if (value === undefined) {
         return null;
@@ -702,7 +725,7 @@ class IO {
    */
   removeAttr(name) {
     if (!name || typeof name !== 'string') {
-      console.warn('removeAttr: Invalid attribute name');
+      IO.#warn('removeAttr: Invalid attribute name');
 
       return this;
     }
@@ -718,7 +741,7 @@ class IO {
    */
   aria(param, val) {
     if (!param || typeof param !== 'string') {
-      console.warn('aria: Invalid aria attribute');
+      IO.#warn('aria: Invalid aria attribute');
 
       if (val === undefined) {
         return null;
@@ -746,7 +769,7 @@ class IO {
    */
   data(name, value) {
     if (!name || typeof name !== 'string') {
-      console.warn('data: Invalid data attribute name');
+      IO.#warn('data: Invalid data attribute name');
 
       if (value === undefined) {
         return null;
@@ -755,15 +778,17 @@ class IO {
       return this;
     }
 
+    const key = IO.#dataKey(name);
+
     if (value === undefined) {
       if (this.elements[0]) {
-        return this.elements[0].dataset[name];
+        return this.elements[0].dataset[key];
       }
 
       return null;
     }
 
-    return this.forEach(el => el.dataset[name] = value);
+    return this.forEach(el => el.dataset[key] = value);
   }
 
   /**
@@ -774,18 +799,20 @@ class IO {
    */
   dataAdd(param, val) {
     if (!param || typeof param !== 'string' || val === undefined) {
-      console.warn('dataAdd: Invalid parameter or value');
+      IO.#warn('dataAdd: Invalid parameter or value');
 
       return this;
     }
 
+    const key = IO.#dataKey(param);
+
     return this.forEach(el => {
-      const current = el.dataset[param] || '';
+      const current = el.dataset[key] || '';
 
       if (typeof val === 'number' && !isNaN(parseFloat(current)) && Number.isFinite(parseFloat(current))) {
-        el.dataset[param] = (parseFloat(current) + val).toString();
+        el.dataset[key] = (parseFloat(current) + val).toString();
       } else {
-        el.dataset[param] = current + val;
+        el.dataset[key] = current + val;
       }
     });
   }
@@ -798,18 +825,20 @@ class IO {
    */
   dataSub(param, val) {
     if (!param || typeof param !== 'string' || val === undefined) {
-      console.warn('dataSub: Invalid parameter or value');
+      IO.#warn('dataSub: Invalid parameter or value');
 
       return this;
     }
 
+    const key = IO.#dataKey(param);
+
     return this.forEach(el => {
-      const current = el.dataset[param] || '';
+      const current = el.dataset[key] || '';
 
       if (typeof val === 'number' && !isNaN(parseFloat(current)) && Number.isFinite(parseFloat(current))) {
-        el.dataset[param] = (parseFloat(current) - val).toString();
+        el.dataset[key] = (parseFloat(current) - val).toString();
       } else {
-        el.dataset[param] = current.replace(new RegExp(IO.escapeRegExp(String(val)), 'g'), '');
+        el.dataset[key] = current.replace(new RegExp(IO.escapeRegExp(String(val)), 'g'), '');
       }
     });
   }
@@ -833,11 +862,7 @@ class IO {
    */
   val(value) {
     if (value === undefined) {
-      if (this.elements[0] && (
-           this.elements[0] instanceof HTMLInputElement
-        || this.elements[0] instanceof HTMLSelectElement
-        || this.elements[0] instanceof HTMLTextAreaElement
-      )) {
+      if (this.elements[0] && IO.#hasValue(this.elements[0])) {
         return this.elements[0].value;
       }
 
@@ -845,10 +870,7 @@ class IO {
     }
 
     return this.forEach(el => {
-      if (el instanceof HTMLInputElement
-       || el instanceof HTMLSelectElement
-       || el instanceof HTMLTextAreaElement
-      ) {
+      if (IO.#hasValue(el)) {
         el.value = value != null ? String(value) : '';
       }
     });
@@ -866,53 +888,27 @@ class IO {
   css(prop, value, important = false) {
     if (typeof prop === 'string' && value === undefined) {
       if (this.elements[0]) {
-        return getComputedStyle(this.elements[0])[prop];
+        const style = getComputedStyle(this.elements[0]);
+
+        return prop.startsWith('--') ? style.getPropertyValue(prop).trim() : style[prop];
       }
 
       return null;
     }
 
     if (typeof prop !== 'string' && typeof prop !== 'object') {
-      console.warn('css: Invalid property');
+      IO.#warn('css: Invalid property');
 
       return this;
     }
 
     return this.forEach(el => {
       if (typeof prop === 'object') {
-        for (let key in prop) {
-          if (key.startsWith('--')) {
-            el.style.setProperty(key, prop[key], important ? 'important' : '');
-          } else {
-            const camelKey = key.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
-
-            if (camelKey in el.style) {
-              el.style[camelKey] = prop[key];
-
-              if (important) {
-                el.style.setProperty(key, prop[key], 'important');
-              }
-            } else {
-              console.warn(`css: Invalid style property "${key}"`);
-            }
-          }
+        for (const key in prop) {
+          this.#setStyle(el, key, prop[key], important);
         }
       } else {
-        if (prop.startsWith('--')) {
-          el.style.setProperty(prop, value, important ? 'important' : '');
-        } else {
-          const camelProp = prop.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
-
-          if (camelProp in el.style) {
-            el.style[camelProp] = value;
-
-            if (important) {
-              el.style.setProperty(prop, value, 'important');
-            }
-          } else {
-            console.warn(`css: Invalid style property "${prop}"`);
-          }
-        }
+        this.#setStyle(el, prop, value, important);
       }
     });
   }
@@ -927,7 +923,7 @@ class IO {
    */
   on(event, handler) {
     if (!event || !handler || typeof event !== 'string' || typeof handler !== 'function') {
-      console.warn('on: Invalid event or handler');
+      IO.#warn('on: Invalid event or handler');
 
       return this;
     }
@@ -943,7 +939,7 @@ class IO {
    */
   off(event, handler) {
     if (!event || !handler || typeof event !== 'string' || typeof handler !== 'function') {
-      console.warn('off: Invalid event or handler');
+      IO.#warn('off: Invalid event or handler');
 
       return this;
     }
@@ -970,7 +966,7 @@ class IO {
    */
   delegate(event, selector, handler) {
     if (!event || !selector || !handler || typeof event !== 'string' || typeof selector !== 'string' || typeof handler !== 'function') {
-      console.warn('delegate: Invalid event, selector, or handler');
+      IO.#warn('delegate: Invalid event, selector, or handler');
 
       return this;
     }
@@ -1012,7 +1008,7 @@ class IO {
    */
   undelegate(event, selector, handler) {
     if (!event || !selector || typeof event !== 'string' || typeof selector !== 'string') {
-      console.warn('undelegate: Invalid event or selector');
+      IO.#warn('undelegate: Invalid event or selector');
 
       return this;
     }
@@ -1061,7 +1057,7 @@ class IO {
    */
   trigger(eventType, options = { bubbles: true, cancelable: true }, detail = null) {
     if (!eventType || typeof eventType !== 'string') {
-      console.warn('trigger: Invalid event type');
+      IO.#warn('trigger: Invalid event type');
 
       return this;
     }
@@ -1081,12 +1077,12 @@ class IO {
    */
   findBy(target) {
     if (!target || typeof target !== 'string') {
-      console.warn('findBy: Invalid selector');
+      IO.#warn('findBy: Invalid selector');
 
       return new IO([]);
     }
 
-    return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(target))).slice(0, 1));
+    return this.#first(target);
   }
 
   /**
@@ -1096,22 +1092,12 @@ class IO {
    */
   findAllBy(target) {
     if (!target || typeof target !== 'string') {
-      console.warn('findAllBy: Invalid selector');
+      IO.#warn('findAllBy: Invalid selector');
 
       return new IO([]);
     }
 
-    const results = [];
-
-    for (const el of this.elements) {
-      const found = el.querySelectorAll(target);
-
-      for (let i = 0; i < found.length; i++) {
-        results.push(found[i]);
-      }
-    }
-
-    return new IO(results);
+    return this.#all(target);
   }
 
   /**
@@ -1121,18 +1107,12 @@ class IO {
    */
   findById(id) {
     if (!id || typeof id !== 'string') {
-      console.warn('findById: Invalid ID');
+      IO.#warn('findById: Invalid ID');
 
       return new IO([]);
     }
 
-    const safeId = CSS.escape(id);
-
-    return new IO(this.elements.flatMap(el => {
-      const found = el.querySelector(`#${safeId}`);
-
-      return found ? [found] : [];
-    }).slice(0, 1));
+    return this.#first(`#${CSS.escape(id)}`);
   }
 
   /**
@@ -1142,12 +1122,12 @@ class IO {
    */
   findByClass(className) {
     if (!className || typeof className !== 'string') {
-      console.warn('findByClass: Invalid class name');
+      IO.#warn('findByClass: Invalid class name');
 
       return new IO([]);
     }
 
-    return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(`.${className}`))).slice(0, 1));
+    return this.#first(`.${CSS.escape(className)}`);
   }
 
   /**
@@ -1157,12 +1137,12 @@ class IO {
    */
   findAllByClass(className) {
     if (!className || typeof className !== 'string') {
-      console.warn('findAllByClass: Invalid class name');
+      IO.#warn('findAllByClass: Invalid class name');
 
       return new IO([]);
     }
 
-    return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(`.${className}`))));
+    return this.#all(`.${CSS.escape(className)}`);
   }
 
   /**
@@ -1172,12 +1152,12 @@ class IO {
    */
   findByName(name) {
     if (!name || typeof name !== 'string') {
-      console.warn('findByName: Invalid name');
+      IO.#warn('findByName: Invalid name');
 
       return new IO([]);
     }
 
-    return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(`[name="${name}"]`))).slice(0, 1));
+    return this.#first(`[name="${CSS.escape(name)}"]`);
   }
 
   /**
@@ -1187,12 +1167,12 @@ class IO {
    */
   findAllByName(name) {
     if (!name || typeof name !== 'string') {
-      console.warn('findAllByName: Invalid name');
+      IO.#warn('findAllByName: Invalid name');
 
       return new IO([]);
     }
 
-    return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(`[name="${name}"]`))));
+    return this.#all(`[name="${CSS.escape(name)}"]`);
   }
 
   /**
@@ -1202,12 +1182,12 @@ class IO {
    */
   findByType(type) {
     if (!type || typeof type !== 'string') {
-      console.warn('findByType: Invalid type');
+      IO.#warn('findByType: Invalid type');
 
       return new IO([]);
     }
 
-    return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(`[type="${type}"]`))).slice(0, 1));
+    return this.#first(`[type="${CSS.escape(type)}"]`);
   }
 
   /**
@@ -1217,12 +1197,12 @@ class IO {
    */
   findAllByType(type) {
     if (!type || typeof type !== 'string') {
-      console.warn('findAllByType: Invalid type');
+      IO.#warn('findAllByType: Invalid type');
 
       return new IO([]);
     }
 
-    return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(`[type="${type}"]`))));
+    return this.#all(`[type="${CSS.escape(type)}"]`);
   }
 
   /**
@@ -1233,14 +1213,12 @@ class IO {
    */
   findByAttr(attr, val) {
     if (!attr || typeof attr !== 'string') {
-      console.warn('findByAttr: Invalid attribute');
+      IO.#warn('findByAttr: Invalid attribute');
 
       return new IO([]);
     }
 
-    const selector = val !== undefined ? `[${attr}="${val}"]` : `[${attr}]`;
-
-    return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(selector))).slice(0, 1));
+    return this.#first(val !== undefined ? `[${CSS.escape(attr)}="${CSS.escape(String(val))}"]` : `[${CSS.escape(attr)}]`);
   }
 
   /**
@@ -1251,14 +1229,12 @@ class IO {
    */
   findAllByAttr(attr, val) {
     if (!attr || typeof attr !== 'string') {
-      console.warn('findAllByAttr: Invalid attribute');
+      IO.#warn('findAllByAttr: Invalid attribute');
 
       return new IO([]);
     }
 
-    const selector = val !== undefined ? `[${attr}="${val}"]` : `[${attr}]`;
-
-    return new IO(this.elements.flatMap(el => Array.from(el.querySelectorAll(selector))));
+    return this.#all(val !== undefined ? `[${CSS.escape(attr)}="${CSS.escape(String(val))}"]` : `[${CSS.escape(attr)}]`);
   }
 
   /**
@@ -1268,7 +1244,7 @@ class IO {
    */
   findParentById(id) {
     if (!id || typeof id !== 'string') {
-      console.warn('findParentById: Invalid ID');
+      IO.#warn('findParentById: Invalid ID');
 
       return new IO([]);
     }
@@ -1285,12 +1261,12 @@ class IO {
    */
   findParentByClass(className) {
     if (!className || typeof className !== 'string') {
-      console.warn('findParentByClass: Invalid class name');
+      IO.#warn('findParentByClass: Invalid class name');
 
       return new IO([]);
     }
 
-    return new IO(this.elements.map(el => el.closest(`.${className}`)).filter(Boolean));
+    return new IO(this.elements.map(el => el.closest(`.${CSS.escape(className)}`)).filter(Boolean));
   }
 
   /*** Utility Methods ***/
@@ -1314,7 +1290,7 @@ class IO {
    */
   isEmptyData(param, strictZero = true) {
     if (!param || typeof param !== 'string') {
-      console.warn('isEmptyData: Invalid parameter');
+      IO.#warn('isEmptyData: Invalid parameter');
 
       return true;
     }
@@ -1411,56 +1387,95 @@ class IO {
 
   /**
    * Sanitize an HTML string to prevent XSS
+   * The string is parsed inside a <template>: its content is inert, so no image is loaded and no
+   * event handler runs during parsing. script/style/iframe/svg... are removed with their content,
+   * other disallowed tags are unwrapped, URL attributes must use an allowed scheme.
    * @param {string} str - The HTML string to sanitize
-   * @param {Object} [options] - Sanitization options
+   * @param {Object} [options] - Sanitization options (missing keys use the defaults)
    * @param {string[]} [options.allowedTags=['b', 'i', 'u', 'strong', 'em', 'p', 'div', 'span', 'a', 'br']] - Allowed HTML tags
    * @param {string[]} [options.allowedAttributes=['src', 'href', 'class', 'id']] - Allowed HTML attributes
+   * @param {string[]} [options.allowedSchemes=['http', 'https', 'mailto', 'tel']] - Allowed URL schemes (relative URLs are always allowed)
    * @returns {string} - HTML-safe string
    */
-  static sanitizeXSS(str, options = {
-    allowedTags: ['b', 'i', 'u', 'strong', 'em', 'p', 'div', 'span', 'a', 'br'],
-    allowedAttributes: ['src', 'href', 'class', 'id']
-  }) {
+  static sanitizeXSS(str, options = {}) {
     if (typeof str !== 'string') {
-      console.warn('sanitizeXSS: Invalid input, expected string');
+      IO.#warn('sanitizeXSS: Invalid input, expected string');
 
       return '';
     }
 
-    const { allowedTags, allowedAttributes } = options;
-    const temp = document.createElement('div');
-    temp.innerHTML = str;
+    const lower = list => list.map(item => String(item).toLowerCase());
+    const allowedTags = lower(options.allowedTags ?? ['b', 'i', 'u', 'strong', 'em', 'p', 'div', 'span', 'a', 'br']);
+    const allowedAttributes = lower(options.allowedAttributes ?? ['src', 'href', 'class', 'id']);
+    const allowedSchemes = lower(options.allowedSchemes ?? ['http', 'https', 'mailto', 'tel']);
 
-    const sanitizeNode = (node) => {
-      if (node.nodeType === Node.ELEMENT_NODE) {
+    const template = document.createElement('template');
+    template.innerHTML = str;
+
+    const clean = parent => {
+      Array.from(parent.childNodes).forEach(node => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          return;
+        }
+
+        if (node.nodeType !== Node.ELEMENT_NODE) {
+          node.remove(); // comments, processing instructions
+
+          return;
+        }
+
         const tagName = node.tagName.toLowerCase();
 
-        if (!allowedTags.includes(tagName)) {
-          node.replaceWith(...Array.from(node.childNodes).map(sanitizeNode));
-        } else {
-          Array.from(node.attributes).forEach(attr => {
-            const attrName = attr.name.toLowerCase();
+        if (IO.#DROP_WITH_CONTENT.includes(tagName)) {
+          node.remove();
 
-            if (attrName === 'style'
-             || attrName.startsWith('on')
-             || (attrName === 'href' && /^(javascript|data):/i.test(attr.value))
-             || !allowedAttributes.includes(attrName)
-            ) {
-              node.removeAttribute(attr.name);
-            }
-          });
-          Array.from(node.childNodes).forEach(sanitizeNode);
+          return;
         }
-      } else if (node.nodeType === Node.TEXT_NODE) {
-        node.textContent = node.textContent.replace(/(javascript|data):/gi, '');
-      }
 
-      return node;
+        clean(node);
+
+        if (!allowedTags.includes(tagName)) {
+          node.replaceWith(...node.childNodes);
+
+          return;
+        }
+
+        Array.from(node.attributes).forEach(attr => {
+          const attrName = attr.name.toLowerCase();
+
+          if (attrName === 'style'
+           || attrName.startsWith('on')
+           || !allowedAttributes.includes(attrName)
+           || (IO.#URL_ATTRIBUTES.includes(attrName) && !IO.#isSafeUrl(attr.value, allowedSchemes))
+          ) {
+            node.removeAttribute(attr.name);
+          }
+        });
+      });
     };
 
-    Array.from(temp.childNodes).forEach(sanitizeNode);
+    clean(template.content);
 
-    return temp.innerHTML;
+    return template.innerHTML;
+  }
+
+  /**
+   * Instance alias of IO.sanitizeXSS, so that $io().sanitizeXSS(...) also works
+   * @param {string} str
+   * @param {Object} [options]
+   * @returns {string}
+   */
+  sanitizeXSS(str, options) {
+    return IO.sanitizeXSS(str, options);
+  }
+
+  /**
+   * Instance alias of IO.escapeRegExp, so that $io().escapeRegExp(...) also works
+   * @param {string} str
+   * @returns {string}
+   */
+  escapeRegExp(str) {
+    return IO.escapeRegExp(str);
   }
 
   /**
@@ -1471,19 +1486,19 @@ class IO {
    */
   static plugin(name, callback) {
     if (typeof name !== 'string') {
-      console.warn('Plugin name must be string');
+      IO.#warn('Plugin name must be string');
 
       return;
     }
 
     if (typeof callback !== 'function') {
-      console.warn('Plugin callback must be function');
+      IO.#warn('Plugin callback must be function');
 
       return;
     }
 
     if (Object.hasOwn(IO.prototype, name)) {
-      console.warn(`Plugin "${name}" already exists`);
+      IO.#warn(`Plugin "${name}" already exists`);
 
       return;
     }
@@ -1492,6 +1507,110 @@ class IO {
   }
 
   /*** Private Methods ***/
+
+  /**
+   * Log a warning when IO.debug is enabled
+   * @param {...*} args - Values to log
+   */
+  static #warn(...args) {
+    if (IO.debug) {
+      console.warn(...args);
+    }
+  }
+
+  /**
+   * Convert a data attribute name to its dataset key ("selected-label" -> "selectedLabel")
+   * @param {string} name - Attribute name without the "data-" prefix
+   * @returns {string}
+   */
+  static #dataKey(name) {
+    return name.includes('-') ? name.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()) : name;
+  }
+
+  /**
+   * Check that a URL attribute value uses an allowed scheme (relative URLs are allowed)
+   * @param {string} value - Raw attribute value
+   * @param {string[]} schemes - Allowed schemes, lowercase
+   * @returns {boolean}
+   */
+  static #isSafeUrl(value, schemes) {
+    // Browsers ignore whitespace and control characters inside the scheme ("java\tscript:").
+    const normalized = value.replace(/[\u0000-\u0020\u007F-\u009F]/g, '').toLowerCase();
+    const match = normalized.match(/^([a-z][a-z0-9+.-]*):/);
+
+    return !match || schemes.includes(match[1]);
+  }
+
+  /**
+   * Check whether an element exposes a "value" property
+   * @param {Element} el
+   * @returns {boolean}
+   */
+  static #hasValue(el) {
+    return IO.#VALUE_ELEMENTS.includes(el.tagName);
+  }
+
+  /**
+   * First element matching a selector inside the collection (stops at the first match)
+   * @param {string} selector
+   * @returns {IO}
+   */
+  #first(selector) {
+    for (const el of this.elements) {
+      const found = el.querySelector(selector);
+
+      if (found) {
+        return new IO(found);
+      }
+    }
+
+    return new IO([]);
+  }
+
+  /**
+   * All elements matching a selector inside the collection, without duplicates
+   * @param {string} selector
+   * @returns {IO}
+   */
+  #all(selector) {
+    const found = new Set();
+
+    for (const el of this.elements) {
+      el.querySelectorAll(selector).forEach(node => found.add(node));
+    }
+
+    return new IO([...found]);
+  }
+
+  /**
+   * Set one inline style property (single write, with or without !important)
+   * @param {HTMLElement} el
+   * @param {string} key - Property name, camelCase, kebab-case or custom property
+   * @param {string} value
+   * @param {boolean} important
+   */
+  #setStyle(el, key, value, important) {
+    if (key.startsWith('--')) {
+      el.style.setProperty(key, value, important ? 'important' : '');
+
+      return;
+    }
+
+    const camelKey = key.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+
+    if (!(camelKey in el.style)) {
+      IO.#warn(`css: Invalid style property "${key}"`);
+
+      return;
+    }
+
+    if (important) {
+      const kebabKey = camelKey.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
+      el.style.setProperty(kebabKey, value, 'important');
+    } else {
+      el.style[camelKey] = value;
+    }
+  }
 
   /**
    * Normalizes class names into an array.

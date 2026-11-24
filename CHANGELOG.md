@@ -8,6 +8,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 - Placeholder for future changes.
 
+## [1.0.9] - 2026-11-24
+### Security
+- `sanitizeXSS` parsed the input with `innerHTML` on a `<div>` of the active document, so handlers such as `<img src=x onerror=...>` ran during sanitization. Parsing now happens in an inert `<template>`.
+- `sanitizeXSS` accepted `href` values like `" javascript:..."`, `"java\tscript:..."` or `vbscript:...`. URL attributes (`href`, `src`, `action`, `formaction`, `srcset`, ...) are now checked against an allowlist of schemes (`allowedSchemes`, default `http`, `https`, `mailto`, `tel`) after removing whitespace and control characters; relative URLs are kept.
+- `script`, `style`, `template`, `iframe`, `object`, `embed`, `svg`, `math`... are removed with their content instead of being unwrapped into text. Comments are removed.
+
+### Fixed
+- `sanitizeXSS` no longer alters plain text containing `javascript:` or `data:` (for example "Format data: CSV").
+- `sanitizeXSS` merges partial options with the defaults (`{ allowedTags: ['b'] }` crashed).
+- `$io('#id.class')` and other selectors starting with `#` were treated as an id; the id fast path now only applies to a plain id.
+- `$io()` without argument returns an empty collection without warning.
+- `val()` reads and writes `button`, `option`, `output` and `data` elements.
+- `data()`, `dataAdd()`, `dataSub()` accept kebab-case names (`selected-label`).
+- Finder methods escape their values (`findByName('a"b')` threw a selector error).
+- `css('--custom-property')` returns the value of a CSS custom property.
+- `tests/index.html` loaded `../dist/io.js`, which does not exist; it now loads `../src/io.js`.
+- README: `sanitizeXSS` and `escapeRegExp` are static; `$io().sanitizeXSS()` and `$io().escapeRegExp()` now exist as aliases so the documented calls work.
+
+### Changed
+- Warnings go through `IO.debug` (default `false`). The published `dist/io.min.js` of 1.0.8 contained no warning at all while `src/io.js` had 55, so the default keeps the behaviour of the published file.
+- README converted from UTF-16 to UTF-8 so that it diffs and renders as text.
+
+### Performance
+- `findBy`, `findById`, `findByClass`, `findByName`, `findByType`, `findByAttr` stop at the first match (`querySelector`) instead of collecting every match of every element and keeping one.
+- `findAll*` methods no longer return duplicates when the collection contains nested elements.
+- `css(prop, value, true)` writes each property once instead of twice.
+
 ## [1.0.8] - 2026-07-15
 ### Added
 - Added internal `#normalizeClasses()` helper for consistent class name normalization.
